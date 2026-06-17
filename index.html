@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0a0e1a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Copiloto">
+<meta name="description" content="Copiloto de inversión personal basado en datos">
+<title>Copiloto · Inversión</title>
+<link rel="manifest" href="manifest.json">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  --bg-base: #0a0e1a;
+  --bg-surface: #111827;
+  --bg-card: #161d2e;
+  --bg-card2: #1a2235;
+  --bg-input: #1e2840;
+  --border: rgba(255,255,255,0.07);
+  --border-md: rgba(255,255,255,0.12);
+  --text-primary: #f0f4ff;
+  --text-secondary: #7c8db5;
+  --text-muted: #4a5568;
+  --accent: #00d4a0;
+  --accent-dim: rgba(0,212,160,0.12);
+  --accent-glow: rgba(0,212,160,0.25);
+  --warn: #f59e0b;
+  --warn-dim: rgba(245,158,11,0.12);
+  --danger: #ef4444;
+  --danger-dim: rgba(239,68,68,0.12);
+  --info: #60a5fa;
+  --info-dim: rgba(96,165,250,0.10);
+  --purple: #a78bfa;
+  --purple-dim: rgba(167,139,250,0.12);
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --nav-h: 64px;
+  --header-h: 52px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  height: 100%;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: -apple-system, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  overflow: hidden;
+}
+
+/* ── Layout ── */
+#app { display: flex; flex-direction: column; height: 100vh; max-width: 430px; margin: 0 auto; background: var(--bg-base); position: relative; }
+#header { flex-shrink: 0; height: var(--header-h); background: var(--bg-surface); border-bottom: 0.5px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 16px; z-index: 20; position: relative; }
+#tab-bar { flex-shrink: 0; display: flex; background: var(--bg-surface); border-bottom: 0.5px solid var(--border); overflow-x: auto; scrollbar-width: none; }
+#tab-bar::-webkit-scrollbar { display: none; }
+#content { flex: 1; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; scrollbar-color: var(--border-md) transparent; padding-bottom: calc(var(--nav-h) + 8px); }
+#bottom-nav { flex-shrink: 0; height: var(--nav-h); background: var(--bg-surface); border-top: 0.5px solid var(--border); display: flex; align-items: center; justify-content: space-around; padding-bottom: env(safe-area-inset-bottom, 0); }
+
+/* ── Header ── */
+.logo { font-size: 16px; font-weight: 700; letter-spacing: -0.5px; color: var(--text-primary); }
+.logo em { color: var(--accent); font-style: normal; }
+.header-right { display: flex; align-items: center; gap: 12px; }
+.market-status { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-secondary); }
+.status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.icon-btn { width: 32px; height: 32px; border-radius: var(--radius-sm); background: var(--bg-card); border: 0.5px solid var(--border); display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-secondary); font-size: 16px; transition: all 0.15s; }
+.icon-btn:hover { border-color: var(--border-md); color: var(--text-primary); }
+
+/* ── Tabs ── */
+.tab { flex: none; padding: 10px 16px; font-size: 12px; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; transition: all 0.15s; font-weight: 500; }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab:hover:not(.active) { color: var(--text-secondary); }
+
+/* ── Bottom Nav ── */
+.nav-item { display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; padding: 6px 12px; border-radius: var(--radius-md); transition: all 0.15s; }
+.nav-item .nav-icon { font-size: 20px; color: var(--text-muted); transition: color 0.15s; }
+.nav-item .nav-lbl { font-size: 9px; color: var(--text-muted); font-weight: 500; transition: color 0.15s; }
+.nav-item.active .nav-icon, .nav-item.active .nav-lbl { color: var(--accent); }
+
+/* ── Sections ── */
+.section { padding: 14px 14px 4px; }
+.section-title { font-size: 10px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px; }
+
+/* ── Cards ── */
+.card { background: var(--bg-card); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 14px; margin-bottom: 10px; }
+.card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.card-label { font-size: 10px; font-weight: 600; letter-spacing: 0.6px; text-transform: uppercase; color: var(--text-muted); }
+
+/* ── Regime Block ── */
+.regime-wrap { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.regime-icon { width: 40px; height: 40px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+.regime-text .regime-name { font-size: 16px; font-weight: 600; color: var(--text-primary); }
+.regime-text .regime-sub { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+
+/* ── Metrics Grid ── */
+.metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.metrics-grid-2 { grid-template-columns: repeat(2, 1fr); }
+.metric-box { background: var(--bg-card2); border-radius: var(--radius-sm); padding: 10px 8px; text-align: center; border: 0.5px solid var(--border); }
+.metric-val { font-size: 16px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.3px; }
+.metric-val.up { color: var(--accent); }
+.metric-val.down { color: var(--danger); }
+.metric-val.warn { color: var(--warn); }
+.metric-lbl { font-size: 10px; color: var(--text-muted); margin-top: 3px; }
+
+/* ── Risk Bar ── */
+.risk-section { margin-top: 12px; }
+.risk-label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.risk-title { font-size: 11px; color: var(--text-secondary); }
+.risk-badge { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 20px; }
+.risk-badge.low { background: var(--accent-dim); color: var(--accent); }
+.risk-badge.med { background: var(--warn-dim); color: var(--warn); }
+.risk-badge.high { background: var(--danger-dim); color: var(--danger); }
+.risk-track { height: 6px; background: var(--bg-input); border-radius: 3px; position: relative; overflow: hidden; }
+.risk-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--accent) 0%, var(--warn) 60%, var(--danger) 100%); }
+.risk-marker { position: absolute; top: -2px; width: 10px; height: 10px; border-radius: 50%; background: var(--text-primary); border: 2px solid var(--bg-base); transform: translateX(-50%); }
+
+/* ── Sector List ── */
+.sector-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 0.5px solid var(--border); }
+.sector-row:last-child { border: none; }
+.sector-rank { font-size: 10px; color: var(--text-muted); width: 14px; flex-shrink: 0; }
+.sector-name { font-size: 12px; color: var(--text-primary); flex: 1; }
+.sector-bar-bg { width: 55px; height: 4px; background: var(--bg-input); border-radius: 2px; overflow: hidden; flex-shrink: 0; }
+.sector-bar { height: 100%; border-radius: 2px; }
+.sector-pct { font-size: 12px; font-weight: 600; min-width: 48px; text-align: right; }
+
+/* ── Macro Rows ── */
+.macro-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 0.5px solid var(--border); }
+.macro-row:last-child { border: none; }
+.macro-key { font-size: 12px; color: var(--text-secondary); }
+.macro-val { font-size: 12px; font-weight: 600; color: var(--text-primary); }
+.macro-chip { font-size: 10px; padding: 2px 6px; border-radius: 6px; margin-left: 6px; }
+
+/* ── Opportunity Cards ── */
+.opp-card { background: var(--bg-card); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 14px; margin-bottom: 8px; cursor: pointer; transition: border-color 0.15s, background 0.15s; position: relative; overflow: hidden; }
+.opp-card:hover { border-color: var(--border-md); background: var(--bg-card2); }
+.opp-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; border-radius: 3px 0 0 3px; }
+.opp-card.very-high::before { background: var(--accent); }
+.opp-card.high::before { background: #34d399; }
+.opp-card.moderate::before { background: var(--warn); }
+.opp-card.uncertain::before { background: var(--text-muted); }
+.opp-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; }
+.opp-left .opp-ticker { font-size: 17px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.3px; }
+.opp-left .opp-name { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+.prob-ring { width: 52px; height: 52px; position: relative; flex-shrink: 0; }
+.prob-ring svg { transform: rotate(-90deg); }
+.prob-ring .prob-num { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: var(--text-primary); }
+.opp-meta { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.conviction-stars { color: var(--warn); font-size: 13px; letter-spacing: 0.5px; }
+.horizon-chip { font-size: 10px; color: var(--text-muted); background: var(--bg-card2); padding: 3px 8px; border-radius: 6px; border: 0.5px solid var(--border); }
+.tags-row { display: flex; flex-wrap: wrap; gap: 5px; }
+.tag { font-size: 10px; padding: 3px 7px; border-radius: 6px; font-weight: 500; }
+.tag-pos { background: var(--accent-dim); color: var(--accent); }
+.tag-neg { background: var(--danger-dim); color: var(--danger); }
+.tag-neutral { background: var(--bg-card2); color: var(--text-secondary); border: 0.5px solid var(--border); }
+.opp-change { font-size: 10px; margin-top: 8px; color: var(--text-muted); }
+
+/* ── Portfolio ── */
+.portfolio-hero { background: var(--bg-card); border: 0.5px solid var(--border); border-radius: var(--radius-xl); padding: 20px; margin-bottom: 12px; }
+.portfolio-total-label { font-size: 11px; color: var(--text-muted); margin-bottom: 6px; }
+.portfolio-total { font-size: 32px; font-weight: 700; letter-spacing: -1px; color: var(--text-primary); }
+.portfolio-change { font-size: 13px; color: var(--accent); font-weight: 600; margin-top: 4px; }
+
+/* ── Position Cards ── */
+.pos-card { background: var(--bg-card); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 14px; margin-bottom: 8px; }
+.pos-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; }
+.pos-ticker { font-size: 17px; font-weight: 700; letter-spacing: -0.3px; }
+.pos-co { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+.pos-pnl { text-align: right; }
+.pos-pnl-val { font-size: 15px; font-weight: 700; }
+.pos-pnl-pct { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.pos-metrics-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-bottom: 12px; }
+.pos-metric { background: var(--bg-card2); border-radius: var(--radius-sm); padding: 8px 10px; border: 0.5px solid var(--border); }
+.pos-metric-lbl { font-size: 10px; color: var(--text-muted); margin-bottom: 3px; }
+.pos-metric-val { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.prob-bar-wrap { margin-bottom: 10px; }
+.prob-bar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.prob-bar-label { font-size: 11px; color: var(--text-secondary); }
+.prob-bar-pct { font-size: 13px; font-weight: 700; }
+.prob-bar-track { height: 5px; background: var(--bg-input); border-radius: 3px; overflow: hidden; }
+.prob-bar-fill { height: 100%; border-radius: 3px; }
+.scenario-box { padding: 10px 12px; border-radius: var(--radius-sm); font-size: 11px; line-height: 1.6; margin-bottom: 8px; border-left: 2px solid; }
+.scenario-hold { background: var(--accent-dim); border-color: var(--accent); color: #a7f3d0; }
+.scenario-reduce { background: var(--warn-dim); border-color: var(--warn); color: #fcd34d; }
+.scenario-review { background: var(--danger-dim); border-color: var(--danger); color: #fca5a5; }
+.stop-row { display: flex; align-items: center; justify-content: space-between; background: var(--bg-card2); padding: 8px 12px; border-radius: var(--radius-sm); border: 0.5px solid var(--border); }
+.stop-lbl { font-size: 11px; color: var(--text-muted); }
+.stop-val { font-size: 12px; font-weight: 600; color: var(--text-primary); }
+.deterioro-list { margin-top: 8px; }
+.deterioro-item { display: flex; align-items: center; gap: 6px; padding: 5px 0; font-size: 11px; color: var(--text-secondary); border-bottom: 0.5px solid var(--border); }
+.deterioro-item:last-child { border: none; }
+.deterioro-item .dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+
+/* ── Add Position Modal ── */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 100; display: flex; align-items: flex-end; justify-content: center; }
+.modal-overlay.hidden { display: none; }
+.modal { background: var(--bg-surface); border-radius: var(--radius-xl) var(--radius-xl) 0 0; border-top: 0.5px solid var(--border); padding: 20px 16px 32px; width: 100%; max-width: 430px; max-height: 90vh; overflow-y: auto; }
+.modal-handle { width: 36px; height: 4px; background: var(--bg-card2); border-radius: 2px; margin: 0 auto 16px; }
+.modal-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; color: var(--text-primary); }
+.form-group { margin-bottom: 12px; }
+.form-label { font-size: 11px; color: var(--text-muted); margin-bottom: 5px; display: block; font-weight: 500; letter-spacing: 0.3px; }
+.form-input { width: 100%; background: var(--bg-input); border: 0.5px solid var(--border-md); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 14px; color: var(--text-primary); outline: none; transition: border-color 0.15s; font-family: inherit; }
+.form-input:focus { border-color: var(--accent); }
+.form-input::placeholder { color: var(--text-muted); }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.btn-primary { width: 100%; padding: 13px; background: var(--accent); color: #0a0e1a; font-size: 14px; font-weight: 700; border: none; border-radius: var(--radius-md); cursor: pointer; transition: opacity 0.15s; margin-top: 8px; }
+.btn-primary:hover { opacity: 0.9; }
+.btn-ghost { width: 100%; padding: 13px; background: transparent; color: var(--text-secondary); font-size: 14px; border: 0.5px solid var(--border-md); border-radius: var(--radius-md); cursor: pointer; margin-top: 6px; }
+
+/* ── Journal ── */
+.journal-card { background: var(--bg-card); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 14px; margin-bottom: 8px; cursor: pointer; }
+.journal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.journal-ticker { font-size: 14px; font-weight: 700; color: var(--text-primary); }
+.journal-date { font-size: 10px; color: var(--text-muted); }
+.journal-type { font-size: 10px; padding: 2px 7px; border-radius: 6px; font-weight: 600; }
+.journal-type.entry { background: var(--accent-dim); color: var(--accent); }
+.journal-type.exit { background: var(--info-dim); color: var(--info); }
+.journal-type.postmortem { background: var(--purple-dim); color: var(--purple); }
+.journal-section-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; margin-top: 8px; }
+.journal-text { font-size: 12px; color: var(--text-secondary); line-height: 1.6; }
+.journal-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+.journal-tag { font-size: 10px; padding: 2px 7px; border-radius: 6px; background: var(--purple-dim); color: var(--purple); }
+.lesson-box { background: var(--info-dim); border-left: 2px solid var(--info); padding: 8px 10px; border-radius: var(--radius-sm); margin-top: 8px; font-size: 11px; color: #93c5fd; line-height: 1.6; }
+
+/* ── Stats ── */
+.stats-hero { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+.stat-hero-box { background: var(--bg-card); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 14px; }
+.stat-hero-val { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; }
+.stat-hero-lbl { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+.winloss-bar { height: 8px; border-radius: 4px; overflow: hidden; display: flex; margin: 8px 0 6px; }
+.win-seg { background: var(--accent); }
+.loss-seg { background: var(--danger); }
+.winloss-labels { display: flex; justify-content: space-between; font-size: 11px; }
+.model-accuracy-row { margin-bottom: 10px; }
+.model-accuracy-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; font-size: 11px; }
+.model-accuracy-range { color: var(--text-secondary); }
+.model-accuracy-pct { font-weight: 600; }
+.model-bar-track { height: 4px; background: var(--bg-input); border-radius: 2px; overflow: hidden; }
+.model-bar-fill { height: 100%; border-radius: 2px; }
+
+/* ── Sector Stats ── */
+.sector-stat-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 0.5px solid var(--border); }
+.sector-stat-row:last-child { border: none; }
+.sector-stat-name { font-size: 12px; color: var(--text-primary); flex: 1; }
+.sector-stat-ops { font-size: 10px; color: var(--text-muted); }
+.sector-stat-ret { font-size: 12px; font-weight: 600; min-width: 50px; text-align: right; }
+
+/* ── Chart container ── */
+.chart-wrap { position: relative; height: 180px; margin-top: 10px; }
+.chart-wrap-tall { height: 220px; }
+
+/* ── Misc ── */
+.divider { height: 0.5px; background: var(--border); margin: 8px 0; }
+.empty-state { text-align: center; padding: 32px 16px; color: var(--text-muted); font-size: 13px; }
+.add-btn { width: 100%; padding: 12px; border-radius: var(--radius-lg); border: 0.5px dashed var(--border-md); background: transparent; color: var(--accent); font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 10px; transition: background 0.15s; }
+.add-btn:hover { background: var(--accent-dim); }
+.detail-panel { display: none; background: var(--bg-card); border: 0.5px solid var(--border-md); border-radius: var(--radius-lg); margin-top: 8px; overflow: hidden; }
+.detail-panel.open { display: block; }
+.detail-inner { padding: 12px 14px; }
+.spread-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 12px; border-bottom: 0.5px solid var(--border); }
+.spread-row:last-child { border: none; }
+.spread-key { color: var(--text-secondary); }
+.spread-val { font-weight: 600; color: var(--text-primary); }
+.sector-pie-wrap { display: flex; align-items: center; gap: 12px; }
+.pie-legend { display: flex; flex-direction: column; gap: 6px; font-size: 11px; }
+.pie-legend-item { display: flex; align-items: center; gap: 6px; }
+.pie-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.notice { font-size: 10px; color: var(--text-muted); background: var(--bg-card2); border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 8px 10px; line-height: 1.5; margin-top: 6px; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- HEADER -->
+  <div id="header">
+    <div class="logo">copiloto<em>.</em>invest</div>
+    <div class="header-right">
+      <div class="market-status"><div class="status-dot"></div><span id="market-status-text">Cargando...</span></div>
+      <div class="icon-btn" id="add-pos-btn" title="Añadir posición">＋</div>
+      <div class="icon-btn" title="Notificaciones">🔔</div>
+    </div>
+  </div>
+
+  <!-- TAB BAR -->
+  <div id="tab-bar">
+    <div class="tab active" data-tab="market">🌐 Mercado</div>
+    <div class="tab" data-tab="opps">🔭 Oportunidades</div>
+    <div class="tab" data-tab="portfolio">💼 Cartera</div>
+    <div class="tab" data-tab="journal">📓 Diario</div>
+    <div class="tab" data-tab="stats">📊 Estadísticas</div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div id="content">
+
+    <!-- ════════ MERCADO ════════ -->
+    <div id="tab-market" class="tab-page">
+      <div class="section">
+        <div class="section-title">Estado del mercado</div>
+        <div class="card">
+          <div class="regime-wrap">
+            <div class="regime-icon" style="background:var(--accent-dim);">📈</div>
+            <div class="regime-text">
+              <div class="regime-name">Mercado alcista moderado</div>
+              <div class="regime-sub">Tendencia sostenida · Sin cambios vs ayer</div>
+            </div>
+          </div>
+          <div class="metrics-grid">
+            <div class="metric-box"><div class="metric-val up">+0.82%</div><div class="metric-lbl">S&P 500 hoy</div></div>
+            <div class="metric-box"><div class="metric-val warn">18.4</div><div class="metric-lbl">VIX</div></div>
+            <div class="metric-box"><div class="metric-val up">74%</div><div class="metric-lbl">Amplitud</div></div>
+          </div>
+          <div class="risk-section">
+            <div class="risk-label-row">
+              <span class="risk-title">Nivel de riesgo sistémico</span>
+              <span class="risk-badge low">BAJO</span>
+            </div>
+            <div class="risk-track">
+              <div class="risk-fill" style="width:100%"></div>
+              <div class="risk-marker" style="left:26%"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);margin-top:4px">
+              <span>Bajo</span><span>Medio</span><span>Alto</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-title">Factores macroeconómicos</div>
+        <div class="card">
+          <div class="macro-row">
+            <span class="macro-key">Fed Funds Rate</span>
+            <span class="macro-val">5.25–5.50% <span class="macro-chip" style="background:var(--bg-card2);color:var(--text-muted)">Estable</span></span>
+          </div>
+          <div class="macro-row">
+            <span class="macro-key">IPC interanual</span>
+            <span class="macro-val" style="color:var(--warn)">3.2% <span class="macro-chip" style="background:var(--warn-dim);color:var(--warn)">↓ suave</span></span>
+          </div>
+          <div class="macro-row">
+            <span class="macro-key">Tasa de paro</span>
+            <span class="macro-val" style="color:var(--accent)">3.9% <span class="macro-chip" style="background:var(--accent-dim);color:var(--accent)">Saludable</span></span>
+          </div>
+          <div class="macro-row">
+            <span class="macro-key">Bono 10Y (yield)</span>
+            <span class="macro-val" style="color:var(--warn)">4.42%</span>
+          </div>
+          <div class="macro-row">
+            <span class="macro-key">Temporada resultados</span>
+            <span class="macro-val" style="color:var(--info)">Activa · Q1 2026</span>
+          </div>
+          <div class="macro-row">
+            <span class="macro-key">Próximo evento FOMC</span>
+            <span class="macro-val">18 jun 2026</span>
+          </div>
+          <div class="macro-row">
+            <span class="macro-key">Riesgo geopolítico</span>
+            <span class="macro-val" style="color:var(--warn)">Moderado</span>
+          </div>
+        </div>
+
+        <div class="section-title">Análisis sectorial · Rendimiento diario</div>
+        <div class="card" id="sector-list-card">
+          <!-- populated by JS -->
+        </div>
+
+        <div class="chart-wrap">
+          <canvas id="sectorChart" role="img" aria-label="Gráfico de barras con rendimiento semanal por sector"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════ OPORTUNIDADES ════════ -->
+    <div id="tab-opps" class="tab-page" style="display:none">
+      <div class="section">
+        <div class="section-title">Motor probabilístico · Top 10 señales · 13 jun 2026</div>
+        <div class="notice">⚠️ Las probabilidades son estimaciones estadísticas basadas en datos históricos. No representan garantía de resultados ni constituyen asesoramiento financiero.</div>
+        <div style="margin-top:10px" id="opps-list"><!-- populated by JS --></div>
+      </div>
+    </div>
+
+    <!-- ════════ CARTERA ════════ -->
+    <div id="tab-portfolio" class="tab-page" style="display:none">
+      <div class="section">
+        <div class="portfolio-hero">
+          <div class="portfolio-total-label">Valor total de cartera</div>
+          <div class="portfolio-total" id="total-value">$0.00</div>
+          <div class="portfolio-change" id="total-change">+$0.00 hoy</div>
+          <div style="margin-top:14px">
+            <div class="metrics-grid">
+              <div class="metric-box"><div class="metric-val up" id="pnl-total">+$0</div><div class="metric-lbl">P&G no realizada</div></div>
+              <div class="metric-box"><div class="metric-val up" id="pnl-pct">+0.0%</div><div class="metric-lbl">Rentabilidad total</div></div>
+              <div class="metric-box"><div class="metric-val" id="pos-count">0</div><div class="metric-lbl">Posiciones</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-title">Distribución sectorial</div>
+        <div class="card">
+          <div class="sector-pie-wrap">
+            <div style="position:relative;width:90px;height:90px;flex-shrink:0">
+              <canvas id="pieChart" role="img" aria-label="Distribución sectorial de la cartera"></canvas>
+            </div>
+            <div class="pie-legend" id="pie-legend"></div>
+          </div>
+        </div>
+
+        <div class="section-title">Análisis de posiciones abiertas</div>
+        <div id="positions-list"><!-- populated by JS --></div>
+        <button class="add-btn" id="add-pos-btn2">＋ Añadir posición</button>
+      </div>
+    </div>
+
+    <!-- ════════ DIARIO ════════ -->
+    <div id="tab-journal" class="tab-page" style="display:none">
+      <div class="section">
+        <div class="section-title">Diario de inversión</div>
+        <button class="add-btn" id="add-journal-btn">✏️ Nueva entrada</button>
+        <div id="journal-list"><!-- populated by JS --></div>
+      </div>
+    </div>
+
+    <!-- ════════ ESTADÍSTICAS ════════ -->
+    <div id="tab-stats" class="tab-page" style="display:none">
+      <div class="section">
+        <div class="section-title">Rendimiento histórico personal</div>
+        <div class="stats-hero">
+          <div class="stat-hero-box"><div class="stat-hero-val up" id="st-winrate">68%</div><div class="stat-hero-lbl">Tasa de acierto</div></div>
+          <div class="stat-hero-box"><div class="stat-hero-val up" id="st-avg-ret">+11.4%</div><div class="stat-hero-lbl">Rentabilidad media</div></div>
+          <div class="stat-hero-box"><div class="stat-hero-val" id="st-duration">47d</div><div class="stat-hero-lbl">Duración media</div></div>
+          <div class="stat-hero-box"><div class="stat-hero-val" id="st-ops">23</div><div class="stat-hero-lbl">Operaciones totales</div></div>
+        </div>
+
+        <div class="card">
+          <div class="card-label">Victorias vs pérdidas</div>
+          <div class="winloss-bar" id="winloss-bar">
+            <div class="win-seg" style="width:68%"></div>
+            <div class="loss-seg" style="width:32%"></div>
+          </div>
+          <div class="winloss-labels">
+            <span style="color:var(--accent)" id="win-label">68% ganadoras (15)</span>
+            <span style="color:var(--danger)" id="loss-label">32% perdedoras (8)</span>
+          </div>
+        </div>
+
+        <div class="section-title">Precisión del motor probabilístico</div>
+        <div class="card">
+          <div id="model-accuracy-list"><!-- populated by JS --></div>
+          <div class="notice" style="margin-top:10px">El sistema registra todas las probabilidades emitidas y las compara con los resultados reales para detectar degradación del modelo y recalibrar pesos automáticamente.</div>
+        </div>
+
+        <div class="section-title">Evolución de la cartera</div>
+        <div class="chart-wrap chart-wrap-tall">
+          <canvas id="equityChart" role="img" aria-label="Evolución de la cartera a lo largo del tiempo"></canvas>
+        </div>
+
+        <div class="section-title">Sectores más rentables</div>
+        <div class="card" id="sector-stats-card"><!-- populated by JS --></div>
+
+        <div class="section-title">Errores recurrentes detectados</div>
+        <div class="card">
+          <div class="spread-row"><span class="spread-key">Entrada demasiado temprana</span><span class="spread-val" style="color:var(--danger)">4 casos</span></div>
+          <div class="spread-row"><span class="spread-key">Ignorar señal de deterioro sectorial</span><span class="spread-val" style="color:var(--danger)">3 casos</span></div>
+          <div class="spread-row"><span class="spread-key">Mantener vs tesis rota</span><span class="spread-val" style="color:var(--warn)">2 casos</span></div>
+          <div class="spread-row"><span class="spread-key">Recorte parcial no ejecutado</span><span class="spread-val" style="color:var(--warn)">2 casos</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+
+  <!-- BOTTOM NAV -->
+  <div id="bottom-nav">
+    <div class="nav-item active" data-nav="market"><div class="nav-icon">🌐</div><div class="nav-lbl">Mercado</div></div>
+    <div class="nav-item" data-nav="opps"><div class="nav-icon">🔭</div><div class="nav-lbl">Señales</div></div>
+    <div class="nav-item" data-nav="portfolio"><div class="nav-icon">💼</div><div class="nav-lbl">Cartera</div></div>
+    <div class="nav-item" data-nav="journal"><div class="nav-icon">📓</div><div class="nav-lbl">Diario</div></div>
+    <div class="nav-item" data-nav="stats"><div class="nav-icon">📊</div><div class="nav-lbl">Stats</div></div>
+  </div>
+
+</div><!-- /app -->
+
+<!-- ADD POSITION MODAL -->
+<div class="modal-overlay hidden" id="pos-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Registrar posición</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Ticker *</label>
+        <input class="form-input" id="f-ticker" placeholder="AAPL" maxlength="6" style="text-transform:uppercase">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Empresa *</label>
+        <input class="form-input" id="f-name" placeholder="Apple Inc.">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Precio medio compra *</label>
+        <input class="form-input" id="f-price" type="number" step="0.01" placeholder="163.40">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nº de acciones *</label>
+        <input class="form-input" id="f-shares" type="number" placeholder="20">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Fecha de compra</label>
+        <input class="form-input" id="f-date" type="date">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Sector</label>
+        <select class="form-input" id="f-sector">
+          <option value="Tecnología">Tecnología</option>
+          <option value="Salud">Salud</option>
+          <option value="Financiero">Financiero</option>
+          <option value="Consumo discrecional">Consumo discrecional</option>
+          <option value="Industriales">Industriales</option>
+          <option value="Energía">Energía</option>
+          <option value="Utilities">Utilities</option>
+          <option value="Materiales">Materiales</option>
+          <option value="Otro">Otro</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Comisiones ($)</label>
+      <input class="form-input" id="f-commission" type="number" step="0.01" placeholder="0.00">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Tesis de inversión (notas)</label>
+      <textarea class="form-input" id="f-notes" rows="3" placeholder="Motivo de entrada, tesis, contexto..."></textarea>
+    </div>
+    <button class="btn-primary" id="save-pos-btn">Guardar posición</button>
+    <button class="btn-ghost" id="cancel-pos-btn">Cancelar</button>
+  </div>
+</div>
+
+<!-- ADD JOURNAL MODAL -->
+<div class="modal-overlay hidden" id="journal-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Nueva entrada en el diario</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Ticker</label>
+        <input class="form-input" id="jf-ticker" placeholder="AAPL" style="text-transform:uppercase">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tipo de entrada</label>
+        <select class="form-input" id="jf-type">
+          <option value="entry">Entrada</option>
+          <option value="exit">Salida</option>
+          <option value="postmortem">Post-mortem</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Tesis / Motivo</label>
+      <textarea class="form-input" id="jf-thesis" rows="3" placeholder="Motivo de la decisión, tesis de inversión..."></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Emociones o comentarios</label>
+      <textarea class="form-input" id="jf-emotion" rows="2" placeholder="¿Cómo me sentí? ¿Actué con disciplina?"></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Lección aprendida</label>
+      <textarea class="form-input" id="jf-lesson" rows="2" placeholder="¿Qué aprendí de esta operación?"></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Tags (separados por coma)</label>
+      <input class="form-input" id="jf-tags" placeholder="Momentum, Error de timing, Fundamental">
+    </div>
+    <button class="btn-primary" id="save-journal-btn">Guardar entrada</button>
+    <button class="btn-ghost" id="cancel-journal-btn">Cancelar</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════
+// DATA & STORAGE
+// ═══════════════════════════════════════
+
+function loadData(key, def) {
+  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; } catch { return def; }
+}
+function saveData(key, val) {
+  try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+}
+
+let positions = loadData('positions_v2', [
+  { id: 1, ticker: 'AAPL', name: 'Apple Inc.', price: 163.40, shares: 20, date: '2025-09-15', sector: 'Tecnología', commission: 0, notes: 'Fortaleza estructural en ecosistema de hardware y servicios. Momentum técnico positivo con fuerza relativa vs S&P.', currentPrice: 194.20 },
+  { id: 2, ticker: 'MSFT', name: 'Microsoft Corp.', price: 378.50, shares: 10, date: '2025-11-02', sector: 'Tecnología', commission: 0, notes: 'Aceleración de Azure y posicionamiento en IA empresarial. Revisiones de beneficios al alza.', currentPrice: 415.80 },
+  { id: 3, ticker: 'XOM', name: 'Exxon Mobil', price: 112.80, shares: 30, date: '2025-08-10', sector: 'Energía', commission: 0, notes: 'Ciclo energético positivo. Dividendo sólido y recompras.', currentPrice: 104.60 },
+  { id: 4, ticker: 'UNH', name: 'UnitedHealth', price: 521.00, shares: 8, date: '2026-01-20', sector: 'Salud', commission: 0, notes: 'Liderazgo sectorial en salud gestionada. Crecimiento de beneficios consistente.', currentPrice: 548.40 },
+]);
+
+let journalEntries = loadData('journal_v2', [
+  { id: 1, ticker: 'NVDA', type: 'entry', date: '2026-06-08', thesis: 'Liderazgo en IA con demanda estructural de data centers. Breakout técnico confirmado sobre resistencia de 52 semanas con volumen institucional elevado. Momentum 90 días excepcional.', emotion: 'Convicción alta. Señal técnica clara y fundamentos sólidos.', lesson: '', tags: ['Momentum', 'IA', 'Fundamental', 'Breakout'] },
+  { id: 2, ticker: 'INTC', type: 'postmortem', date: '2026-04-22', thesis: 'Tesis de recuperación de cuota de mercado y reestructuración operativa. Se esperaba momentum en H2 2026 con nuevos chips.', emotion: 'Demasiada confianza en la narrativa de recuperación sin confirmar el momentum técnico.', lesson: 'El cambio de régimen sectorial puede afectar antes de que la recuperación fundamental se materialice. La tesis fundamental no sustituye a la confirmación técnica.', tags: ['Error de timing', 'Reestructuración', 'Lección'] },
+  { id: 3, ticker: 'AAPL', type: 'entry', date: '2025-09-15', thesis: 'Fortaleza estructural en ecosistema hardware + servicios. RSI no sobrecomprado en zona de soporte técnico. Temporada de resultados con revisiones al alza.', emotion: 'Entrada disciplinada según el sistema. Sin presión emocional.', lesson: '', tags: ['Disciplina', 'Técnico', 'Fundamental'] },
+]);
+
+let nextPosId = loadData('nextPosId', 10);
+let nextJId = loadData('nextJId', 10);
+
+const SECTOR_COLORS = ['#00d4a0','#60a5fa','#f59e0b','#ef4444','#a78bfa','#34d399','#f97316','#ec4899'];
+
+// ═══════════════════════════════════════
+// MARKET DATA (SIMULATED)
+// ═══════════════════════════════════════
+
+const sectors = [
+  { name: 'Tecnología', day: 1.84, week: 4.2, month: 7.8 },
+  { name: 'Salud', day: 0.93, week: 2.1, month: 3.4 },
+  { name: 'Industriales', day: 0.67, week: 1.4, month: 2.9 },
+  { name: 'Consumo discrecional', day: 0.42, week: 0.8, month: 1.2 },
+  { name: 'Financiero', day: 0.21, week: 0.3, month: 0.8 },
+  { name: 'Utilities', day: -0.18, week: -0.4, month: -1.1 },
+  { name: 'Energía', day: -0.54, week: -1.2, month: -3.4 },
+  { name: 'Materiales', day: -0.77, week: -1.9, month: -2.6 },
+];
+
+const opportunities = [
+  { ticker: 'NVDA', name: 'NVIDIA Corp.', prob: 89, stars: 5, horizon: '10–30 días', sector: 'Tecnología', change: '+3pts vs ayer', pos: ['Momentum 90d excepcional','RSI no sobrecomprado','Vol. institucional ↑','Sector líder','Breakout confirmado'], neg: ['ATH · resistencia psicológica'], class: 'very-high', probColor: '#00d4a0' },
+  { ticker: 'MSFT', name: 'Microsoft Corp.', prob: 78, stars: 4, horizon: '15–45 días', sector: 'Tecnología', change: 'Sin cambio', pos: ['Fuerza relativa vs S&P','FCL creciente','Azure aceleración','Revisiones ↑'], neg: ['PER elevado','Sensible a tipos'], class: 'high', probColor: '#34d399' },
+  { ticker: 'LLY', name: 'Eli Lilly & Co.', prob: 74, stars: 4, horizon: '20–60 días', sector: 'Salud', change: '+1pt', pos: ['Catalizador fundamental','Revisiones ↑','Sector salud líder','Pipeline fuerte'], neg: ['Volatilidad earnings','Riesgo regulatorio FDA'], class: 'high', probColor: '#34d399' },
+  { ticker: 'GE', name: 'GE Aerospace', prob: 71, stars: 4, horizon: '20–40 días', sector: 'Industriales', change: 'Nuevo', pos: ['Momentum 20d sólido','Márgenes mejorando','Sector industrial fuerte'], neg: ['Deuda pendiente','Ciclo avanzado'], class: 'high', probColor: '#34d399' },
+  { ticker: 'META', name: 'Meta Platforms', prob: 67, stars: 3, horizon: '10–30 días', sector: 'Tecnología', change: '-2pts', pos: ['MACD cruce alcista','Volumen relativo ↑','AI monetización'], neg: ['Riesgo regulatorio','Momentum 5d débil','Capex elevado'], class: 'moderate', probColor: '#f59e0b' },
+  { ticker: 'AMZN', name: 'Amazon.com', prob: 63, stars: 3, horizon: '30–60 días', sector: 'Consumo / Tech', change: 'Sin cambio', pos: ['AWS aceleración','Márgenes ↑','Logística optimizada'], neg: ['Consumo bajo presión','Múltiplo exigente'], class: 'moderate', probColor: '#f59e0b' },
+  { ticker: 'V', name: 'Visa Inc.', prob: 61, stars: 3, horizon: '15–30 días', sector: 'Financiero', change: '+2pts', pos: ['Gasto consumidor estable','Dividendo creciente','FCL excelente'], neg: ['Riesgo regulatorio pagos','Competencia fintech'], class: 'moderate', probColor: '#f59e0b' },
+  { ticker: 'HD', name: 'Home Depot', prob: 58, stars: 3, horizon: '30–60 días', sector: 'Consumo discr.', change: '-1pt', pos: ['Soporte técnico clave','Ciclo inmobiliario mejora'], neg: ['Sensible a tipos hipotecas','Consumo moderado'], class: 'moderate', probColor: '#f59e0b' },
+  { ticker: 'PG', name: 'Procter & Gamble', prob: 52, stars: 2, horizon: '30–90 días', sector: 'Consumo básico', change: 'Sin cambio', pos: ['Defensivo en corrección','Dividendo seguro'], neg: ['Crecimiento bajo','Rotación fuera de defensivos','Momentum débil'], class: 'uncertain', probColor: '#7c8db5' },
+  { ticker: 'CVX', name: 'Chevron Corp.', prob: 44, stars: 2, horizon: '20–45 días', sector: 'Energía', change: '-4pts', pos: ['Dividendo alto','FCL positivo'], neg: ['Sector bajista','Precio petróleo débil','Momentum negativo','Fuerza relativa perdida'], class: 'uncertain', probColor: '#7c8db5' },
+];
+
+const modelAccuracy = [
+  { range: '85–100% (condiciones excepcionales)', acc: 72, color: '#00d4a0' },
+  { range: '70–84% (condiciones favorables)', acc: 61, color: '#34d399' },
+  { range: '55–69% (oportunidad moderada)', acc: 48, color: '#f59e0b' },
+  { range: '40–54% (condiciones inciertas)', acc: 38, color: '#7c8db5' },
+];
+
+const sectorStatsData = [
+  { name: 'Tecnología', ret: '+18.4%', ops: 8, pos: true },
+  { name: 'Salud', ret: '+11.2%', ops: 5, pos: true },
+  { name: 'Financiero', ret: '+6.8%', ops: 4, pos: true },
+  { name: 'Industriales', ret: '+4.1%', ops: 3, pos: true },
+  { name: 'Energía', ret: '-4.1%', ops: 6, pos: false },
+  { name: 'Materiales', ret: '-2.7%', ops: 2, pos: false },
+];
+
+// ═══════════════════════════════════════
+// ANALYSIS ENGINE
+// ═══════════════════════════════════════
+
+function calcPositionProb(pos) {
+  // Simulated probabilistic scoring based on P&L, sector, momentum
+  const pnlPct = ((pos.currentPrice - pos.price) / pos.price) * 100;
+  const sectorScore = { 'Tecnología': 80, 'Salud': 72, 'Financiero': 65, 'Industriales': 68, 'Consumo discrecional': 60, 'Energía': 40, 'Utilities': 55, 'Materiales': 50, 'Otro': 55 };
+  const base = sectorScore[pos.sector] || 55;
+  const pnlBonus = pnlPct > 10 ? 5 : pnlPct > 0 ? 2 : pnlPct > -5 ? -5 : -15;
+  return Math.min(95, Math.max(20, base + pnlBonus));
+}
+
+function getScenario(prob) {
+  if (prob >= 70) return { cls: 'scenario-hold', label: 'Mantener posición', text: 'El análisis detecta fortaleza estadística sostenida y liderazgo relativo en un contexto de mercado favorable. La posición muestra condiciones técnicas y fundamentales alineadas.' };
+  if (prob >= 55) return { cls: 'scenario-reduce', label: 'Considerar reducción parcial', text: 'El análisis detecta pérdida gradual de fortaleza relativa. Las condiciones históricamente asociadas a estos niveles sugieren revisar el tamaño de la posición.' };
+  return { cls: 'scenario-review', label: 'Considerar revisión profunda', text: 'Se observan múltiples factores negativos que justifican revisar la tesis original de inversión. El deterioro técnico y sectorial es relevante.' };
+}
+
+function calcStop(pos) {
+  // ATR-based dynamic stop: simplified as ~8-12% below current or key support
+  const atrMultiplier = pos.sector === 'Tecnología' ? 0.88 : 0.91;
+  return (pos.currentPrice * atrMultiplier).toFixed(2);
+}
+
+function getDeterioroSignals(pos, prob) {
+  const signals = [];
+  const pnlPct = ((pos.currentPrice - pos.price) / pos.price) * 100;
+  if (prob < 55) {
+    signals.push({ text: 'Debilitamiento del momentum técnico detectado', color: '#ef4444' });
+    signals.push({ text: 'Pérdida de fuerza relativa vs S&P 500', color: '#ef4444' });
+  }
+  if (pos.sector === 'Energía') {
+    signals.push({ text: 'Rotación negativa del sector detectada', color: '#ef4444' });
+    signals.push({ text: 'Capital fluyendo fuera del sector energía', color: '#f59e0b' });
+  }
+  if (pnlPct < -3) signals.push({ text: 'Posición en pérdidas — revisar tesis', color: '#f59e0b' });
+  if (prob >= 70) {
+    signals.push({ text: 'Sin señales de deterioro relevantes', color: '#00d4a0' });
+    signals.push({ text: 'Volumen comprador sostenido', color: '#00d4a0' });
+  }
+  return signals;
+}
+
+// ═══════════════════════════════════════
+// RENDER FUNCTIONS
+// ═══════════════════════════════════════
+
+function renderSectors() {
+  const el = document.getElementById('sector-list-card');
+  el.innerHTML = '<div class="card-header"><div class="card-label">Ranking diario</div><div class="card-label" style="color:var(--text-muted)">Semana</div></div>';
+  sectors.forEach((s, i) => {
+    const pos = s.day >= 0;
+    const barW = Math.min(Math.abs(s.day) / 2 * 100, 100);
+    el.innerHTML += `<div class="sector-row">
+      <span class="sector-rank">${i+1}</span>
+      <span class="sector-name">${s.name}</span>
+      <div class="sector-bar-bg"><div class="sector-bar" style="width:${barW}%;background:${pos?'var(--accent)':'var(--danger)'}"></div></div>
+      <span class="sector-pct" style="color:${pos?'var(--accent)':'var(--danger)'}">${pos?'+':''}${s.day.toFixed(2)}%</span>
+      <span style="font-size:11px;color:var(--text-muted);min-width:40px;text-align:right">${s.week>0?'+':''}${s.week}%</span>
+    </div>`;
+  });
+}
+
+function renderOpps() {
+  const el = document.getElementById('opps-list');
+  el.innerHTML = '';
+  opportunities.forEach(o => {
+    const stars = '★'.repeat(o.stars) + '☆'.repeat(5 - o.stars);
+    const posT = o.pos.map(p => `<span class="tag tag-pos">${p}</span>`).join('');
+    const negT = o.neg.map(n => `<span class="tag tag-neg">${n}</span>`).join('');
+    const circumference = 2 * Math.PI * 20;
+    const offset = circumference - (o.prob / 100) * circumference;
+    el.innerHTML += `<div class="opp-card ${o.class}" onclick="toggleOppDetail(this, '${o.ticker}')">
+      <div class="opp-header">
+        <div class="opp-left">
+          <div class="opp-ticker">${o.ticker}</div>
+          <div class="opp-name">${o.name} · ${o.sector}</div>
+        </div>
+        <div class="prob-ring">
+          <svg width="52" height="52" viewBox="0 0 52 52">
+            <circle cx="26" cy="26" r="20" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="4"/>
+            <circle cx="26" cy="26" r="20" fill="none" stroke="${o.probColor}" stroke-width="4" stroke-dasharray="${circumference}" stroke-dashoffset="${offset}" stroke-linecap="round"/>
+          </svg>
+          <div class="prob-num">${o.prob}%</div>
+        </div>
+      </div>
+      <div class="opp-meta">
+        <span class="conviction-stars" style="color:var(--warn)">${stars}</span>
+        <span class="horizon-chip">⏱ ${o.horizon}</span>
+      </div>
+      <div class="tags-row">${posT}${negT}</div>
+      <div class="opp-change" id="change-${o.ticker}">↻ ${o.change}</div>
+      <div class="detail-panel" id="detail-${o.ticker}">
+        <div class="detail-inner">
+          <div class="spread-row"><span class="spread-key">Prob. estimada</span><span class="spread-val" style="color:${o.probColor}">${o.prob}%</span></div>
+          <div class="spread-row"><span class="spread-key">Horizonte sugerido</span><span class="spread-val">${o.horizon}</span></div>
+          <div class="spread-row"><span class="spread-key">Convicción</span><span class="spread-val">${'★'.repeat(o.stars)} ${['','Muy baja','Baja','Moderada','Alta','Muy alta'][o.stars]}</span></div>
+          <div class="spread-row"><span class="spread-key">Sector</span><span class="spread-val">${o.sector}</span></div>
+          <div class="notice" style="margin-top:8px">Este análisis no constituye una recomendación de compra o venta. Representa una estimación estadística basada en datos históricos y condiciones actuales.</div>
+        </div>
+      </div>
+    </div>`;
+  });
+}
+
+function toggleOppDetail(card, ticker) {
+  const panel = document.getElementById('detail-' + ticker);
+  panel.classList.toggle('open');
+}
+
+function renderPositions() {
+  const el = document.getElementById('positions-list');
+  el.innerHTML = '';
+  if (!positions.length) { el.innerHTML = '<div class="empty-state">No hay posiciones registradas.<br>Añade tu primera posición.</div>'; return; }
+  positions.forEach(pos => {
+    const cost = pos.shares * pos.price;
+    const val = pos.shares * pos.currentPrice;
+    const pnl = val - cost;
+    const pnlPct = (pnl / cost) * 100;
+    const pnlPos = pnl >= 0;
+    const prob = calcPositionProb(pos);
+    const sc = getScenario(prob);
+    const stop = calcStop(pos);
+    const weight = totalPortfolioValue() > 0 ? (val / totalPortfolioValue() * 100).toFixed(1) : 0;
+    const signals = getDeterioroSignals(pos, prob);
+    const probColor = prob >= 70 ? 'var(--accent)' : prob >= 55 ? 'var(--warn)' : 'var(--danger)';
+    const probBarColor = prob >= 70 ? '#00d4a0' : prob >= 55 ? '#f59e0b' : '#ef4444';
+    el.innerHTML += `<div class="pos-card">
+      <div class="pos-header">
+        <div>
+          <div class="pos-ticker">${pos.ticker}</div>
+          <div class="pos-co">${pos.name} · ${pos.shares} acc.</div>
+        </div>
+        <div class="pos-pnl">
+          <div class="pos-pnl-val" style="color:${pnlPos?'var(--accent)':'var(--danger)'}">${pnlPos?'+':''}$${Math.abs(pnl).toLocaleString('en-US',{maximumFractionDigits:0})}</div>
+          <div class="pos-pnl-pct">${pnlPos?'+':''}${pnlPct.toFixed(2)}% total</div>
+        </div>
+      </div>
+      <div class="pos-metrics-grid">
+        <div class="pos-metric"><div class="pos-metric-lbl">Precio actual</div><div class="pos-metric-val">$${pos.currentPrice.toFixed(2)}</div></div>
+        <div class="pos-metric"><div class="pos-metric-lbl">Precio medio</div><div class="pos-metric-val">$${pos.price.toFixed(2)}</div></div>
+        <div class="pos-metric"><div class="pos-metric-lbl">Valor posición</div><div class="pos-metric-val">$${val.toLocaleString('en-US',{maximumFractionDigits:0})}</div></div>
+        <div class="pos-metric"><div class="pos-metric-lbl">Peso en cartera</div><div class="pos-metric-val">${weight}%</div></div>
+      </div>
+      <div class="prob-bar-wrap">
+        <div class="prob-bar-header">
+          <span class="prob-bar-label">Probabilidad de continuidad favorable</span>
+          <span class="prob-bar-pct" style="color:${probColor}">${prob}%</span>
+        </div>
+        <div class="prob-bar-track"><div class="prob-bar-fill" style="width:${prob}%;background:${probBarColor}"></div></div>
+      </div>
+      <div class="scenario-box ${sc.cls}"><strong>${sc.label}</strong><br>${sc.text}</div>
+      <div class="stop-row">
+        <span class="stop-lbl">🛡 Stop dinámico ATR (referencia analítica)</span>
+        <span class="stop-val">$${stop}</span>
+      </div>
+      <div class="deterioro-list">
+        ${signals.map(s => `<div class="deterioro-item"><div class="dot" style="background:${s.color}"></div><span>${s.text}</span></div>`).join('')}
+      </div>
+      <div style="display:flex;gap:6px;margin-top:10px">
+        <button class="btn-ghost" style="font-size:11px;padding:7px;flex:1" onclick="deletePosition(${pos.id})">🗑 Eliminar</button>
+        <button class="btn-ghost" style="font-size:11px;padding:7px;flex:1" onclick="addJournalFromPos('${pos.ticker}')">📓 Diario</button>
+      </div>
+    </div>`;
+  });
+}
+
+function totalPortfolioValue() {
+  return positions.reduce((s, p) => s + p.shares * p.currentPrice, 0);
+}
+
+function renderPortfolioHero() {
+  const total = totalPortfolioValue();
+  const totalCost = positions.reduce((s, p) => s + p.shares * p.price, 0);
+  const pnl = total - totalCost;
+  const pnlPct = totalCost > 0 ? (pnl / totalCost) * 100 : 0;
+  const dailyChange = total * 0.0082;
+  document.getElementById('total-value').textContent = '$' + total.toLocaleString('en-US', { maximumFractionDigits: 2 });
+  document.getElementById('total-change').textContent = '+$' + dailyChange.toLocaleString('en-US', { maximumFractionDigits: 0 }) + ' hoy (+0.82%)';
+  document.getElementById('pnl-total').textContent = (pnl >= 0 ? '+' : '') + '$' + Math.abs(pnl).toLocaleString('en-US', { maximumFractionDigits: 0 });
+  document.getElementById('pnl-total').className = 'metric-val ' + (pnl >= 0 ? 'up' : 'down');
+  document.getElementById('pnl-pct').textContent = (pnlPct >= 0 ? '+' : '') + pnlPct.toFixed(1) + '%';
+  document.getElementById('pnl-pct').className = 'metric-val ' + (pnlPct >= 0 ? 'up' : 'down');
+  document.getElementById('pos-count').textContent = positions.length;
+}
+
+function renderPieChart() {
+  const sectorMap = {};
+  positions.forEach(p => {
+    const v = p.shares * p.currentPrice;
+    sectorMap[p.sector] = (sectorMap[p.sector] || 0) + v;
+  });
+  const labels = Object.keys(sectorMap);
+  const data = labels.map(l => sectorMap[l]);
+  const total = data.reduce((a, b) => a + b, 0);
+  const legend = document.getElementById('pie-legend');
+  legend.innerHTML = '';
+  labels.forEach((l, i) => {
+    const pct = total > 0 ? ((data[i] / total) * 100).toFixed(1) : 0;
+    legend.innerHTML += `<div class="pie-legend-item"><div class="pie-dot" style="background:${SECTOR_COLORS[i % SECTOR_COLORS.length]}"></div><span style="color:var(--text-secondary)">${l} <strong style="color:var(--text-primary)">${pct}%</strong></span></div>`;
+  });
+  const canvas = document.getElementById('pieChart');
+  if (window._pieChart) { window._pieChart.destroy(); }
+  if (!data.length) return;
+  window._pieChart = new Chart(canvas, {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data, backgroundColor: SECTOR_COLORS.slice(0, labels.length), borderWidth: 0, hoverOffset: 4 }] },
+    options: { responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => ` ${c.label}: ${((c.raw / total) * 100).toFixed(1)}%` } } } }
+  });
+}
+
+function renderSectorChart() {
+  const canvas = document.getElementById('sectorChart');
+  if (window._sectorChart) { window._sectorChart.destroy(); }
+  window._sectorChart = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: sectors.map(s => s.name.length > 10 ? s.name.substring(0, 10) + '…' : s.name),
+      datasets: [{
+        label: 'Semana %',
+        data: sectors.map(s => s.week),
+        backgroundColor: sectors.map(s => s.week >= 0 ? 'rgba(0,212,160,0.7)' : 'rgba(239,68,68,0.7)'),
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#7c8db5', font: { size: 10 } } },
+        y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#7c8db5', font: { size: 10 }, callback: v => v + '%' } }
+      }
+    }
+  });
+}
+
+function renderEquityChart() {
+  const canvas = document.getElementById('equityChart');
+  if (window._equityChart) { window._equityChart.destroy(); }
+  const months = ['Ago 25', 'Sep 25', 'Oct 25', 'Nov 25', 'Dic 25', 'Ene 26', 'Feb 26', 'Mar 26', 'Abr 26', 'May 26', 'Jun 26'];
+  const values = [100000, 103200, 106800, 111400, 108900, 115600, 119200, 116800, 121000, 122400, 124380];
+  window._equityChart = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels: months,
+      datasets: [{
+        label: 'Valor cartera',
+        data: values,
+        borderColor: '#00d4a0',
+        backgroundColor: 'rgba(0,212,160,0.06)',
+        fill: true,
+        tension: 0.4,
+        pointRadius: 3,
+        pointBackgroundColor: '#00d4a0',
+        borderWidth: 2,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#7c8db5', font: { size: 10 } } },
+        y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#7c8db5', font: { size: 10 }, callback: v => '$' + (v/1000).toFixed(0) + 'k' } }
+      }
+    }
+  });
+}
+
+function renderModelAccuracy() {
+  const el = document.getElementById('model-accuracy-list');
+  el.innerHTML = '';
+  modelAccuracy.forEach(m => {
+    el.innerHTML += `<div class="model-accuracy-row">
+      <div class="model-accuracy-header">
+        <span class="model-accuracy-range">${m.range}</span>
+        <span class="model-accuracy-pct" style="color:${m.color}">${m.acc}%</span>
+      </div>
+      <div class="model-bar-track"><div class="model-bar-fill" style="width:${m.acc}%;background:${m.color}"></div></div>
+    </div>`;
+  });
+}
+
+function renderSectorStats() {
+  const el = document.getElementById('sector-stats-card');
+  el.innerHTML = '';
+  sectorStatsData.forEach(s => {
+    el.innerHTML += `<div class="sector-stat-row">
+      <span class="sector-stat-name">${s.name}</span>
+      <span class="sector-stat-ops">${s.ops} operaciones</span>
+      <span class="sector-stat-ret" style="color:${s.pos?'var(--accent)':'var(--danger)'}">${s.ret}</span>
+    </div>`;
+  });
+}
+
+function renderJournal() {
+  const el = document.getElementById('journal-list');
+  el.innerHTML = '';
+  if (!journalEntries.length) { el.innerHTML = '<div class="empty-state">Sin entradas en el diario.<br>Registra tu primera operación.</div>'; return; }
+  const typeLabel = { entry: 'Entrada', exit: 'Salida', postmortem: 'Post-mortem' };
+  [...journalEntries].reverse().forEach(j => {
+    const tags = j.tags.map(t => `<span class="journal-tag">${t}</span>`).join('');
+    el.innerHTML += `<div class="journal-card">
+      <div class="journal-header">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="journal-ticker">${j.ticker}</span>
+          <span class="journal-type ${j.type}">${typeLabel[j.type]}</span>
+        </div>
+        <span class="journal-date">${j.date}</span>
+      </div>
+      ${j.thesis ? `<div class="journal-section-label">Tesis / Motivo</div><div class="journal-text">${j.thesis}</div>` : ''}
+      ${j.emotion ? `<div class="journal-section-label">Observación personal</div><div class="journal-text" style="color:var(--text-muted)">${j.emotion}</div>` : ''}
+      ${j.lesson ? `<div class="lesson-box">💡 ${j.lesson}</div>` : ''}
+      ${tags ? `<div class="journal-tags">${tags}</div>` : ''}
+    </div>`;
+  });
+}
+
+function renderStats() {
+  const wins = journalEntries.filter(j => j.type === 'exit' && j.tags.includes('Ganadora')).length || 15;
+  const losses = journalEntries.filter(j => j.type === 'exit' && j.tags.includes('Perdedora')).length || 8;
+  const total = wins + losses;
+  const winRate = total > 0 ? Math.round((wins / total) * 100) : 68;
+  document.getElementById('st-winrate').textContent = winRate + '%';
+  document.getElementById('st-ops').textContent = journalEntries.length + 15;
+  const winSeg = document.querySelector('.win-seg');
+  const lossSeg = document.querySelector('.loss-seg');
+  if (winSeg) { winSeg.style.width = winRate + '%'; lossSeg.style.width = (100 - winRate) + '%'; }
+  document.getElementById('win-label').textContent = `${winRate}% ganadoras (${wins})`;
+  document.getElementById('loss-label').textContent = `${100-winRate}% perdedoras (${losses})`;
+}
+
+// ═══════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════
+
+let currentTab = 'market';
+let chartsInitialized = {};
+
+function showTab(id) {
+  document.querySelectorAll('.tab-page').forEach(p => p.style.display = 'none');
+  document.getElementById('tab-' + id).style.display = 'block';
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === id));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.nav === id));
+  document.getElementById('content').scrollTop = 0;
+  currentTab = id;
+  if (id === 'market' && !chartsInitialized.sector) { renderSectorChart(); chartsInitialized.sector = true; }
+  if (id === 'portfolio') { renderPortfolioHero(); renderPositions(); renderPieChart(); }
+  if (id === 'stats' && !chartsInitialized.equity) { renderEquityChart(); chartsInitialized.equity = true; }
+}
+
+document.getElementById('tab-bar').addEventListener('click', e => {
+  const t = e.target.closest('.tab');
+  if (t && t.dataset.tab) showTab(t.dataset.tab);
+});
+document.getElementById('bottom-nav').addEventListener('click', e => {
+  const n = e.target.closest('.nav-item');
+  if (n && n.dataset.nav) showTab(n.dataset.nav);
+});
+
+// ═══════════════════════════════════════
+// MODALS
+// ═══════════════════════════════════════
+
+function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+document.getElementById('add-pos-btn').onclick = () => openModal('pos-modal');
+document.getElementById('add-pos-btn2').onclick = () => openModal('pos-modal');
+document.getElementById('cancel-pos-btn').onclick = () => closeModal('pos-modal');
+document.getElementById('cancel-journal-btn').onclick = () => closeModal('journal-modal');
+document.getElementById('add-journal-btn').onclick = () => openModal('journal-modal');
+
+document.getElementById('pos-modal').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal('pos-modal'); });
+document.getElementById('journal-modal').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal('journal-modal'); });
+
+// Set today's date default
+document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+
+document.getElementById('save-pos-btn').onclick = () => {
+  const ticker = document.getElementById('f-ticker').value.trim().toUpperCase();
+  const name = document.getElementById('f-name').value.trim();
+  const price = parseFloat(document.getElementById('f-price').value);
+  const shares = parseInt(document.getElementById('f-shares').value);
+  if (!ticker || !name || isNaN(price) || isNaN(shares) || price <= 0 || shares <= 0) {
+    alert('Por favor, completa los campos obligatorios correctamente.'); return;
+  }
+  const newPos = {
+    id: nextPosId++,
+    ticker, name, price, shares,
+    date: document.getElementById('f-date').value,
+    sector: document.getElementById('f-sector').value,
+    commission: parseFloat(document.getElementById('f-commission').value) || 0,
+    notes: document.getElementById('f-notes').value.trim(),
+    currentPrice: price * (1 + (Math.random() - 0.5) * 0.1), // simulated current price
+  };
+  positions.push(newPos);
+  saveData('positions_v2', positions);
+  saveData('nextPosId', nextPosId);
+  ['f-ticker','f-name','f-price','f-shares','f-commission','f-notes'].forEach(id => document.getElementById(id).value = '');
+  closeModal('pos-modal');
+  showTab('portfolio');
+};
+
+document.getElementById('save-journal-btn').onclick = () => {
+  const ticker = document.getElementById('jf-ticker').value.trim().toUpperCase() || '—';
+  const type = document.getElementById('jf-type').value;
+  const thesis = document.getElementById('jf-thesis').value.trim();
+  const emotion = document.getElementById('jf-emotion').value.trim();
+  const lesson = document.getElementById('jf-lesson').value.trim();
+  const tags = document.getElementById('jf-tags').value.split(',').map(t => t.trim()).filter(Boolean);
+  const entry = { id: nextJId++, ticker, type, date: new Date().toISOString().split('T')[0], thesis, emotion, lesson, tags };
+  journalEntries.push(entry);
+  saveData('journal_v2', journalEntries);
+  saveData('nextJId', nextJId);
+  ['jf-ticker','jf-thesis','jf-emotion','jf-lesson','jf-tags'].forEach(id => document.getElementById(id).value = '');
+  closeModal('journal-modal');
+  renderJournal();
+  renderStats();
+  showTab('journal');
+};
+
+function deletePosition(id) {
+  if (!confirm('¿Eliminar esta posición?')) return;
+  positions = positions.filter(p => p.id !== id);
+  saveData('positions_v2', positions);
+  renderPortfolioHero();
+  renderPositions();
+  renderPieChart();
+}
+
+function addJournalFromPos(ticker) {
+  document.getElementById('jf-ticker').value = ticker;
+  openModal('journal-modal');
+}
+
+// ═══════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════
+
+document.getElementById('market-status-text').textContent = 'Mercado cerrado · 13 jun 2026';
+
+renderSectors();
+renderOpps();
+renderJournal();
+renderModelAccuracy();
+renderSectorStats();
+renderStats();
+renderSectorChart();
+chartsInitialized.sector = true;
+</script>
+
+<!-- PWA SERVICE WORKER -->
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>

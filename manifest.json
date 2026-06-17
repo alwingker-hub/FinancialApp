@@ -1,0 +1,20 @@
+{
+  "name": "Copiloto · Inversión Personal",
+  "short_name": "Copiloto",
+  "description": "Copiloto de inversión personal basado en datos y análisis probabilístico",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0e1a",
+  "theme_color": "#0a0e1a",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='40' fill='%230a0e1a'/><text y='130' x='96' text-anchor='middle' font-size='110' font-family='system-ui'>📈</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    }
+  ],
+  "categories": ["finance", "productivity"],
+  "lang": "es",
+  "dir": "ltr"
+}
