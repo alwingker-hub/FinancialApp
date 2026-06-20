@@ -1092,10 +1092,218 @@ function addJournalFromPos(ticker) {
 }
 
 // ═══════════════════════════════════════
+// POLYGON.IO API INTEGRATION
+// ═══════════════════════════════════════
+
+const POLYGON_KEY = '3EVwB0YaJssipvKgn1mlpqXRlXrT1bb0';
+const BASE = 'https://api.polygon.io';
+
+// Tickers del S&P 500 que monitorizamos
+const SECTOR_ETFS = {
+  'Tecnología':             'XLK',
+  'Salud':                  'XLV',
+  'Financiero':             'XLF',
+  'Industriales':           'XLI',
+  'Consumo discrecional':   'XLY',
+  'Consumo básico':         'XLP',
+  'Energía':                'XLE',
+  'Utilities':              'XLU',
+  'Materiales':             'XLB',
+  'Inmobiliario':           'XLRE',
+  'Comunicaciones':         'XLC',
+};
+
+const OPP_TICKERS = ['NVDA','MSFT','LLY','GE','META','AMZN','V','HD','PG','CVX'];
+
+function isMarketOpen() {
+  const now = new Date();
+  const et = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+  const day = et.getDay();
+  const h = et.getHours();
+  const m = et.getMinutes();
+  const minutes = h * 60 + m;
+  return day >= 1 && day <= 5 && minutes >= 570 && minutes < 960; // 9:30–16:00 ET
+}
+
+function formatMarketStatus() {
+  const now = new Date();
+  const et = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+  const day = et.getDay();
+  const h = et.getHours().toString().padStart(2,'0');
+  const m = et.getMinutes().toString().padStart(2,'0');
+  const days = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  const months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  const dateStr = `${et.getDate()} ${months[et.getMonth()]} ${et.getFullYear()}`;
+  if (isMarketOpen()) return `Mercado abierto · ${h}:${m} ET`;
+  if (day === 0 || day === 6) return `Mercado cerrado · Fin de semana · ${dateStr}`;
+  return `Mercado cerrado · ${dateStr}`;
+}
+
+async function polygonGet(path) {
+  const sep = path.includes('?') ? '&' : '?';
+  const res = await fetch(`${BASE}${path}${sep}apiKey=${POLYGON_KEY}`);
+  if (!res.ok) throw new Error(`Polygon error ${res.status}`);
+  return res.json();
+}
+
+// Obtener precio actual o último cierre de un ticker
+async function getPrice(ticker) {
+  try {
+    const data = await polygonGet(`/v2/aggs/ticker/${ticker}/prev`);
+    if (data.results && data.results[0]) {
+      return { c: data.results[0].c, o: data.results[0].o, h: data.results[0].h, l: data.results[0].l, v: data.results[0].v };
+    }
+  } catch {}
+  return null;
+}
+
+// Obtener snapshot de múltiples tickers
+async function getSnapshots(tickers) {
+  try {
+    const data = await polygonGet(`/v2/snapshot/locale/us/markets/stocks/tickers?tickers=${tickers.join(',')}`);
+    return data.tickers || [];
+  } catch { return []; }
+}
+
+// Calcular % cambio
+function pctChange(current, prev) {
+  if (!prev || prev === 0) return 0;
+  return ((current - prev) / prev) * 100;
+}
+
+// ── Cargar estado del mercado (SPY como proxy S&P 500) ──
+async function loadMarketData() {
+  document.getElementById('market-status-text').textContent = formatMarketStatus();
+  try {
+    const spy = await getPrice('SPY');
+    const vix = await getPrice('VIXY'); // VIX proxy ETF
+    if (spy) {
+      const chg = pctChange(spy.c, spy.o);
+      const chgSign = chg >= 0 ? '+' : '';
+      // Actualizar métricas del S&P 500
+      const grid = document.querySelector('#tab-market .metrics-grid');
+      if (grid) {
+        const boxes = grid.querySelectorAll('.metric-val');
+        if (boxes[0]) { boxes[0].textContent = `${chgSign}${chg.toFixed(2)}%`; boxes[0].className = 'metric-val ' + (chg >= 0 ? 'up' : 'down'); }
+        if (boxes[1] && vix) { boxes[1].textContent = vix.c.toFixed(1); boxes[1].className = 'metric-val ' + (vix.c > 25 ? 'down' : vix.c > 18 ? 'warn' : 'up'); }
+      }
+      // Actualizar régimen
+      const regimeName = document.querySelector('.regime-name');
+      const regimeSub = document.querySelector('.regime-sub');
+      if (regimeName) {
+        if (chg > 1) { regimeName.textContent = 'Mercado alcista fuerte'; }
+        else if (chg > 0) { regimeName.textContent = 'Mercado alcista moderado'; }
+        else if (chg > -1) { regimeName.textContent = 'Mercado lateral / débil'; }
+        else { regimeName.textContent = 'Mercado bajista'; }
+      }
+      if (regimeSub) { regimeSub.textContent = `S&P 500 ${chgSign}${chg.toFixed(2)}% · ${formatMarketStatus()}`; }
+    }
+  } catch (e) { console.warn('Error cargando mercado:', e); }
+}
+
+// ── Cargar rendimiento sectorial con ETFs ──
+async function loadSectorData() {
+  try {
+    const tickers = Object.values(SECTOR_ETFS);
+    const snapshots = await getSnapshots(tickers);
+    if (!snapshots.length) return;
+
+    const sectorMap = {};
+    snapshots.forEach(s => {
+      const day = s.todaysChangePerc || 0;
+      const name = Object.keys(SECTOR_ETFS).find(k => SECTOR_ETFS[k] === s.ticker);
+      if (name) sectorMap[name] = { day, ticker: s.ticker, price: s.day?.c || 0 };
+    });
+
+    // Actualizar array global de sectores con datos reales
+    sectors.forEach(sec => {
+      if (sectorMap[sec.name]) {
+        sec.day = parseFloat(sectorMap[sec.name].day.toFixed(2));
+      }
+    });
+    sectors.sort((a, b) => b.day - a.day);
+    renderSectors();
+    renderSectorChart();
+  } catch (e) { console.warn('Error sectores:', e); }
+}
+
+// ── Cargar precios reales de posiciones en cartera ──
+async function loadPortfolioPrices() {
+  if (!positions.length) return;
+  try {
+    const tickers = [...new Set(positions.map(p => p.ticker))];
+    const snapshots = await getSnapshots(tickers);
+    const priceMap = {};
+    snapshots.forEach(s => { priceMap[s.ticker] = s.day?.c || s.prevDay?.c || null; });
+    let updated = false;
+    positions.forEach(pos => {
+      if (priceMap[pos.ticker] && priceMap[pos.ticker] > 0) {
+        pos.currentPrice = priceMap[pos.ticker];
+        updated = true;
+      }
+    });
+    if (updated) {
+      saveData('positions_v2', positions);
+      if (currentTab === 'portfolio') {
+        renderPortfolioHero();
+        renderPositions();
+        renderPieChart();
+      }
+    }
+  } catch (e) { console.warn('Error precios cartera:', e); }
+}
+
+// ── Cargar datos reales de oportunidades ──
+async function loadOpportunitiesData() {
+  try {
+    const snapshots = await getSnapshots(OPP_TICKERS);
+    const dataMap = {};
+    snapshots.forEach(s => { dataMap[s.ticker] = s; });
+
+    opportunities.forEach(opp => {
+      const snap = dataMap[opp.ticker];
+      if (!snap) return;
+      const chg = snap.todaysChangePerc || 0;
+      // Ajustar probabilidad ligeramente según momentum del día
+      if (chg > 2) opp.prob = Math.min(95, opp.prob + 3);
+      else if (chg < -2) opp.prob = Math.max(20, opp.prob - 3);
+      opp.change = `${chg >= 0 ? '+' : ''}${chg.toFixed(2)}% hoy · $${(snap.day?.c || 0).toFixed(2)}`;
+    });
+    opportunities.sort((a, b) => b.prob - a.prob);
+    renderOpps();
+  } catch (e) { console.warn('Error oportunidades:', e); }
+}
+
+// ── Mostrar loader mientras carga ──
+function showLoadingBanner() {
+  const banner = document.createElement('div');
+  banner.id = 'loading-banner';
+  banner.style.cssText = 'position:fixed;top:52px;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:rgba(0,212,160,0.1);border-bottom:0.5px solid rgba(0,212,160,0.3);padding:6px 16px;font-size:11px;color:var(--accent);text-align:center;z-index:30';
+  banner.textContent = '⟳ Actualizando datos de mercado...';
+  document.body.appendChild(banner);
+  return banner;
+}
+
+// ── INIT con datos reales ──
+async function initApp() {
+  const banner = showLoadingBanner();
+  try {
+    await Promise.allSettled([
+      loadMarketData(),
+      loadSectorData(),
+      loadOpportunitiesData(),
+      loadPortfolioPrices(),
+    ]);
+  } finally {
+    banner.remove();
+  }
+}
+
+// ═══════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════
 
-document.getElementById('market-status-text').textContent = 'Mercado cerrado · 13 jun 2026';
+document.getElementById('market-status-text').textContent = formatMarketStatus();
 
 renderSectors();
 renderOpps();
@@ -1105,6 +1313,12 @@ renderSectorStats();
 renderStats();
 renderSectorChart();
 chartsInitialized.sector = true;
+
+// Cargar datos reales al arrancar
+initApp();
+
+// Refrescar cada 5 minutos si el mercado está abierto
+setInterval(() => { if (isMarketOpen()) initApp(); }, 5 * 60 * 1000);
 </script>
 
 <!-- PWA SERVICE WORKER -->
