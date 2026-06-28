@@ -835,47 +835,76 @@ async function getSnapshots(tickers) {
 // ═══════════════════════════════════════
 // FRED API
 // ═══════════════════════════════════════
-async function fredGet(seriesId) {
-  try {
-    const url = `https://api.stlouisfed.org/fred/series/observations?series_id=${seriesId}&api_key=${FRED_KEY}&file_type=json&sort_order=desc&limit=2`;
-    const res = await fetch(url);
-    const data = await res.json();
-    const obs = data.observations?.filter(o => o.value !== '.');
-    return obs?.length ? parseFloat(obs[0].value) : null;
-  } catch { return null; }
+// Datos macro de respaldo — se muestran inmediatamente mientras carga
+const FRED_DEFAULTS = { FEDFUNDS:5.33, CPIAUCSL:3.4, UNRATE:3.9, GS10:4.42, GS2:4.71 };
+
+function applyFredValues(fed, cpi, unemp, y10, y2, isFallback) {
+  const suffix = isFallback ? ' *' : '';
+  const el_fed = document.getElementById('m-fed');
+  if(el_fed) { el_fed.textContent = fed.toFixed(2)+'%'+suffix; el_fed.style.color='var(--text-primary)'; }
+  const el_cpi = document.getElementById('m-cpi');
+  if(el_cpi) {
+    const c=cpi>4?'var(--danger)':cpi>2.5?'var(--warn)':'var(--accent)';
+    el_cpi.textContent=cpi.toFixed(1)+'%'+suffix; el_cpi.style.color=c;
+  }
+  const el_unemp = document.getElementById('m-unemp');
+  if(el_unemp) {
+    const c=unemp>5?'var(--danger)':unemp>4?'var(--warn)':'var(--accent)';
+    el_unemp.textContent=unemp.toFixed(1)+'%'+suffix; el_unemp.style.color=c;
+  }
+  const el_y10 = document.getElementById('m-y10');
+  if(el_y10) { el_y10.textContent=y10.toFixed(2)+'%'+suffix; el_y10.style.color='var(--warn)'; }
+  const spread = y10-y2;
+  const el_spread = document.getElementById('m-spread');
+  if(el_spread) {
+    el_spread.textContent = spread<0 ? '⚠️ Invertida ('+spread.toFixed(2)+'%)'+suffix : 'Normal (+'+spread.toFixed(2)+'%)'+suffix;
+    el_spread.style.color = spread<0?'var(--danger)':'var(--accent)';
+  }
+  const ci = document.getElementById('curve-icon'); if(ci) ci.textContent=spread<0?'⚠️':'✅';
+  const ce = document.getElementById('curve-explain');
+  if(ce) ce.textContent=spread<0?'Curva invertida: históricamente anticipa recesión en 12-18 meses.':'Curva normal: el largo plazo rinde más que el corto. Señal saludable.';
+  if(spread<0) { const rb=document.getElementById('risk-badge'); if(rb){rb.textContent='ELEVADO';rb.className='risk-badge high';} }
 }
+
+async function fredGet(seriesId) {
+  const fredUrl = `https://api.stlouisfed.org/fred/series/observations?series_id=${seriesId}&api_key=${FRED_KEY}&file_type=json&sort_order=desc&limit=2`;
+  const proxies = [
+    `https://api.allorigins.win/get?url=${encodeURIComponent(fredUrl)}`,
+    `https://corsproxy.io/?${encodeURIComponent(fredUrl)}`,
+  ];
+  for (const proxy of proxies) {
+    try {
+      const res = await fetch(proxy, { signal: AbortSignal.timeout(8000) });
+      if (!res.ok) continue;
+      const wrapper = await res.json();
+      const raw = wrapper.contents || wrapper;
+      const data = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      const obs = data.observations?.filter(o => o.value !== '.');
+      if (obs?.length) return parseFloat(obs[0].value);
+    } catch { continue; }
+  }
+  return null;
+}
+
 async function loadFredData() {
-  
+  // Mostrar valores de respaldo inmediatamente
+  applyFredValues(FRED_DEFAULTS.FEDFUNDS, FRED_DEFAULTS.CPIAUCSL, FRED_DEFAULTS.UNRATE, FRED_DEFAULTS.GS10, FRED_DEFAULTS.GS2, true);
   try {
     const [fed,cpi,unemp,y10,y2] = await Promise.all([
       fredGet('FEDFUNDS'), fredGet('CPIAUCSL'), fredGet('UNRATE'), fredGet('GS10'), fredGet('GS2'),
     ]);
-    if (fed  !== null) { const el=document.getElementById('m-fed');   if(el)el.innerHTML=`${fed.toFixed(2)}%`; }
-    if (cpi  !== null) {
-      const c=cpi>4?'var(--danger)':cpi>2.5?'var(--warn)':'var(--accent)';
-      const el=document.getElementById('m-cpi'); if(el){el.innerHTML=`${cpi.toFixed(1)}%`;el.style.color=c;}
-      const pill=document.getElementById('mp-cpi'); if(pill)pill.style.borderColor=cpi>4?'rgba(239,68,68,0.3)':cpi>2.5?'rgba(245,158,11,0.3)':'rgba(0,212,160,0.2)';
-    }
-    if (unemp !== null) {
-      const c=unemp>5?'var(--danger)':unemp>4?'var(--warn)':'var(--accent)';
-      const el=document.getElementById('m-unemp'); if(el){el.innerHTML=`${unemp.toFixed(1)}%`;el.style.color=c;}
-    }
-    if (y10  !== null) { const el=document.getElementById('m-y10');  if(el){el.innerHTML=`${y10.toFixed(2)}%`;el.style.color='var(--warn)';} }
-    if (y10 !== null && y2 !== null) {
-      const spread = y10 - y2;
-      const c = spread<0?'var(--danger)':'var(--accent)';
-      const label = spread<0?`⚠️ Invertida (${spread.toFixed(2)}%)`:`Normal (+${spread.toFixed(2)}%)`;
-      const el=document.getElementById('m-spread'); if(el){el.innerHTML=label;el.style.color=c;}
-      const curveIcon=document.getElementById('curve-icon'); if(curveIcon)curveIcon.textContent=spread<0?'⚠️':'✅';
-      const curveExp=document.getElementById('curve-explain');
-      if(curveExp)curveExp.textContent=spread<0?'Curva invertida: históricamente anticipa recesión en 12–18 meses. Señal de cautela.':'Curva normal: el largo plazo rinde más que el corto. Señal saludable.';
-      // Ajustar riesgo si curva invertida
-      if (spread<0) {
-        const rb=document.getElementById('risk-badge'); if(rb){rb.textContent='ELEVADO';rb.className='risk-badge high';}
-      }
-    }
+    // Actualizar con datos reales si los recibimos
+    applyFredValues(
+      fed   ?? FRED_DEFAULTS.FEDFUNDS,
+      cpi   ?? FRED_DEFAULTS.CPIAUCSL,
+      unemp ?? FRED_DEFAULTS.UNRATE,
+      y10   ?? FRED_DEFAULTS.GS10,
+      y2    ?? FRED_DEFAULTS.GS2,
+      !(fed !== null || cpi !== null || unemp !== null)
+    );
   } catch(e) { console.warn('FRED error:', e); }
 }
+
 
 // ═══════════════════════════════════════
 // ALPHA VANTAGE
