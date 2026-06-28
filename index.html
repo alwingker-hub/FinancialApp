@@ -845,7 +845,7 @@ async function fredGet(seriesId) {
   } catch { return null; }
 }
 async function loadFredData() {
-  if (FRED_KEY === '2a') return;
+  
   try {
     const [fed,cpi,unemp,y10,y2] = await Promise.all([
       fredGet('FEDFUNDS'), fredGet('CPIAUCSL'), fredGet('UNRATE'), fredGet('GS10'), fredGet('GS2'),
@@ -883,7 +883,7 @@ async function loadFredData() {
 const avCache = {};
 async function avGet(ticker) {
   if (avCache[ticker]) return avCache[ticker];
-  if (AV_KEY === '1a') return null;
+  
   try {
     const url = `https://www.alphavantage.co/query?function=OVERVIEW&symbol=${ticker}&apikey=${AV_KEY}`;
     const res = await fetch(url);
@@ -1548,6 +1548,8 @@ function hideLoadingBanner(){const b=document.getElementById('loading-banner');i
 // ═══════════════════════════════════════
 async function initApp() {
   showLoadingBanner('⟳ Cargando datos reales...');
+  // Timeout de seguridad: si tarda más de 12s, ocultar banner igualmente
+  const safetyTimer = setTimeout(() => hideLoadingBanner(), 12000);
   try {
     await Promise.allSettled([
       loadMarketData(),
@@ -1557,12 +1559,17 @@ async function initApp() {
       loadFredData(),
     ]);
     checkAlerts();
-  } finally { hideLoadingBanner(); }
+  } catch(e) {
+    console.warn('initApp error:', e);
+  } finally {
+    clearTimeout(safetyTimer);
+    hideLoadingBanner();
+  }
   // Análisis técnico en segundo plano (Polygon: 5 req/min en plan free)
   setTimeout(()=>loadTechAnalysisForOpps(), 2000);
   setTimeout(()=>loadTechAnalysisForPositions(), 4000);
-  // Alpha Vantage fundamentales (5 req/min)
-  if (AV_KEY!=='1a') setTimeout(()=>enrichWithFundamentals(opportunities[0]).then(()=>renderOpps()), 8000);
+  // Alpha Vantage fundamentales
+  setTimeout(()=>{ if(opportunities[0]) enrichWithFundamentals(opportunities[0]).then(()=>renderOpps()).catch(()=>{}); }, 8000);
 }
 
 // ── Render inicial con datos simulados ──
