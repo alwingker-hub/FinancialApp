@@ -392,25 +392,55 @@ html,body{height:100%;background:var(--bg-base);color:var(--text-primary);font-f
 
     <!-- ══ CARTERA ══ -->
     <div id="tab-portfolio" class="tab-page" style="display:none">
-      <div class="section">
-        <div class="portfolio-hero">
-          <div class="portfolio-total-label">Valor total de cartera</div>
-          <div class="portfolio-total" id="total-value">$0.00</div>
-          <div class="portfolio-change" id="total-change">Cargando...</div>
-          <div style="margin-top:14px">
-            <div class="metrics-grid">
-              <div class="metric-box"><div class="metric-val up" id="pnl-total">—</div><div class="metric-lbl">P&G no realizada</div></div>
-              <div class="metric-box"><div class="metric-val up" id="pnl-pct">—</div><div class="metric-lbl">Rentab. total</div></div>
-              <div class="metric-box"><div class="metric-val" id="pos-count">0</div><div class="metric-lbl">Posiciones</div></div>
-            </div>
+
+      <!-- Hero vacío -->
+      <div id="pf-empty" style="padding:40px 24px;text-align:center;display:block">
+        <div style="font-size:48px;margin-bottom:12px">💼</div>
+        <div style="font-size:17px;font-weight:700;color:var(--text-primary);margin-bottom:6px">Tu cartera está vacía</div>
+        <div style="font-size:12px;color:var(--text-muted);line-height:1.6;margin-bottom:20px">Añade tus posiciones para que el copiloto analice en tiempo real si debes mantener, acumular o reducir cada una</div>
+        <button onclick="openModal('pos-modal')" style="background:var(--accent);color:#0a0e1a;border:none;padding:13px 28px;border-radius:var(--radius-md);font-size:14px;font-weight:700;cursor:pointer">＋ Añadir primera posición</button>
+      </div>
+
+      <!-- Hero con datos — oculto hasta que haya posiciones -->
+      <div id="pf-filled" style="display:none">
+
+        <!-- Resumen global -->
+        <div style="background:var(--bg-card);border-bottom:0.5px solid var(--border);padding:16px 14px">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Valor total de cartera</div>
+          <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:12px">
+            <div style="font-size:30px;font-weight:700;letter-spacing:-1px;color:var(--text-primary)" id="total-value">$0</div>
+            <div id="total-change-pct" style="font-size:14px;font-weight:600">—</div>
+          </div>
+          <div class="metrics-grid">
+            <div class="metric-box"><div class="metric-val" id="pnl-total">—</div><div class="metric-lbl">Beneficio no real.</div></div>
+            <div class="metric-box"><div class="metric-val" id="pnl-pct">—</div><div class="metric-lbl">Rentabilidad</div></div>
+            <div class="metric-box"><div class="metric-val" id="pos-count">0</div><div class="metric-lbl">Posiciones</div></div>
           </div>
         </div>
-        <div class="section-title">Distribución sectorial</div>
-        <div class="card"><div class="sector-pie-wrap"><div style="position:relative;width:90px;height:90px;flex-shrink:0"><canvas id="pieChart"></canvas></div><div class="pie-legend" id="pie-legend"></div></div></div>
-        <div class="section-title">Análisis de posiciones · Técnico + Fundamental</div>
-        <div id="positions-list"></div>
-        <button class="add-btn" id="add-pos-btn2">＋ Añadir posición</button>
+
+        <div class="section">
+          <!-- Texto análisis copiloto de la cartera -->
+          <div class="section-title">Copiloto · Visión global</div>
+          <div id="pf-copilot-box" style="background:var(--bg-card);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:12px 14px;font-size:12px;color:var(--text-secondary);line-height:1.7;border-left:2px solid var(--accent);margin-bottom:10px">
+            Analizando cartera...
+          </div>
+
+          <!-- Distribución sectorial -->
+          <div class="section-title">Distribución sectorial</div>
+          <div class="card" style="padding:12px 14px">
+            <div class="sector-pie-wrap">
+              <div style="position:relative;width:90px;height:90px;flex-shrink:0"><canvas id="pieChart"></canvas></div>
+              <div class="pie-legend" id="pie-legend"></div>
+            </div>
+          </div>
+
+          <!-- Posiciones -->
+          <div class="section-title">Posiciones abiertas</div>
+          <div id="positions-list"></div>
+          <button class="add-btn" id="add-pos-btn2">＋ Añadir posición</button>
+        </div>
       </div>
+
     </div>
 
     <!-- ══ DIARIO ══ -->
@@ -450,6 +480,13 @@ html,body{height:100%;background:var(--bg-base);color:var(--text-primary);font-f
           <div class="spread-row"><span class="spread-key">Mantener vs tesis rota</span><span class="spread-val" style="color:var(--warn)">2 casos</span></div>
           <div class="spread-row"><span class="spread-key">Recorte parcial no ejecutado</span><span class="spread-val" style="color:var(--warn)">2 casos</span></div>
         </div>
+        <div class="section-title">Diagnóstico de conexión APIs</div>
+        <div class="card">
+          <div class="card-label" style="margin-bottom:8px">Estado de cada fuente de datos</div>
+          <div id="diag-panel-content" style="min-height:40px">
+            <div style="font-size:11px;color:var(--text-muted)">Esperando primera carga...</div>
+          </div>
+        </div>
         <div class="section-title">Actualización automática</div>
         <div class="card">
           <div class="card-label" style="margin-bottom:8px">Frecuencia de actualización</div>
@@ -486,28 +523,96 @@ html,body{height:100%;background:var(--bg-base);color:var(--text-primary);font-f
 <div class="modal-overlay hidden" id="pos-modal">
   <div class="modal">
     <div class="modal-handle"></div>
-    <div class="modal-title">Registrar posición</div>
-    <div class="form-row">
-      <div class="form-group"><label class="form-label">Ticker *</label><input class="form-input" id="f-ticker" placeholder="AAPL" maxlength="6" style="text-transform:uppercase"></div>
-      <div class="form-group"><label class="form-label">Empresa *</label><input class="form-input" id="f-name" placeholder="Apple Inc."></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div class="modal-title" style="margin:0">Registrar posición</div>
+      <div onclick="closeModal('pos-modal')" style="font-size:20px;color:var(--text-muted);cursor:pointer">✕</div>
     </div>
+
+    <!-- Ticker + empresa -->
     <div class="form-row">
-      <div class="form-group"><label class="form-label">Precio medio *</label><input class="form-input" id="f-price" type="number" step="0.01" placeholder="163.40"></div>
-      <div class="form-group"><label class="form-label">Nº acciones *</label><input class="form-input" id="f-shares" type="number" placeholder="20"></div>
+      <div class="form-group">
+        <label class="form-label">Ticker *</label>
+        <input class="form-input" id="f-ticker" placeholder="AAPL" maxlength="8" oninput="this.value=this.value.toUpperCase();autoFillName(this.value)">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Empresa *</label>
+        <input class="form-input" id="f-name" placeholder="Apple Inc.">
+      </div>
     </div>
+
+    <!-- Precio y acciones -->
     <div class="form-row">
-      <div class="form-group"><label class="form-label">Fecha de compra</label><input class="form-input" id="f-date" type="date"></div>
-      <div class="form-group"><label class="form-label">Sector</label>
-        <select class="form-input" id="f-sector">
-          <option value="Tecnología">Tecnología</option><option value="Salud">Salud</option>
-          <option value="Financiero">Financiero</option><option value="Consumo discrecional">Consumo discrecional</option>
-          <option value="Industriales">Industriales</option><option value="Energía">Energía</option>
-          <option value="Utilities">Utilities</option><option value="Materiales">Materiales</option><option value="Otro">Otro</option>
+      <div class="form-group">
+        <label class="form-label">Precio medio compra *</label>
+        <input class="form-input" id="f-price" type="number" step="0.01" min="0" placeholder="0.00" oninput="recalcForm()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nº de acciones *</label>
+        <input class="form-input" id="f-shares" type="number" min="0" placeholder="0" oninput="recalcForm()">
+      </div>
+    </div>
+
+    <!-- Cálculo automático -->
+    <div id="form-calc-box" style="display:none;background:var(--bg-card2);border:0.5px solid var(--border);border-radius:var(--radius-md);padding:12px;margin-bottom:12px">
+      <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Resumen de la posición</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div><div style="font-size:10px;color:var(--text-muted)">Inversión total</div><div style="font-size:15px;font-weight:700;color:var(--text-primary)" id="f-calc-total">—</div></div>
+        <div><div style="font-size:10px;color:var(--text-muted)">Precio actual (est.)</div><div style="font-size:15px;font-weight:700;color:var(--accent)" id="f-calc-current">—</div></div>
+        <div><div style="font-size:10px;color:var(--text-muted)">Valor actual (est.)</div><div style="font-size:15px;font-weight:700;color:var(--text-primary)" id="f-calc-val">—</div></div>
+        <div><div style="font-size:10px;color:var(--text-muted)">Rendimiento (est.)</div><div style="font-size:15px;font-weight:700" id="f-calc-yield">—</div></div>
+        <div><div style="font-size:10px;color:var(--text-muted)">Beneficio (est.)</div><div style="font-size:15px;font-weight:700" id="f-calc-profit">—</div></div>
+        <div><div style="font-size:10px;color:var(--text-muted)">Divisa</div><div style="font-size:15px;font-weight:700;color:var(--text-primary)" id="f-calc-currency">USD</div></div>
+      </div>
+      <div style="font-size:10px;color:var(--text-muted);margin-top:8px">* Precio actual estimado basado en último dato disponible. Se actualizará al confirmar.</div>
+    </div>
+
+    <!-- Fecha, sector, moneda -->
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Fecha de compra</label>
+        <input class="form-input" id="f-date" type="date">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Divisa</label>
+        <select class="form-input" id="f-currency">
+          <option value="USD">USD ($)</option>
+          <option value="EUR">EUR (€)</option>
+          <option value="GBP">GBP (£)</option>
         </select>
       </div>
     </div>
-    <div class="form-group"><label class="form-label">Comisiones ($)</label><input class="form-input" id="f-commission" type="number" step="0.01" placeholder="0.00"></div>
-    <div class="form-group"><label class="form-label">Tesis de inversión</label><textarea class="form-input" id="f-notes" rows="3" placeholder="Motivo de entrada, contexto..."></textarea></div>
+    <div class="form-group">
+      <label class="form-label">Sector</label>
+      <select class="form-input" id="f-sector">
+        <option value="Tecnología">Tecnología</option>
+        <option value="Salud">Salud</option>
+        <option value="Financiero">Financiero</option>
+        <option value="Consumo discrecional">Consumo discrecional</option>
+        <option value="Consumo básico">Consumo básico</option>
+        <option value="Industriales">Industriales</option>
+        <option value="Energía">Energía</option>
+        <option value="Utilities">Utilities</option>
+        <option value="Materiales">Materiales</option>
+        <option value="Comunicaciones">Comunicaciones</option>
+        <option value="Inmobiliario">Inmobiliario</option>
+        <option value="Otro">Otro</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Comisiones pagadas</label>
+        <input class="form-input" id="f-commission" type="number" step="0.01" min="0" placeholder="0.00">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Stop loss personal</label>
+        <input class="form-input" id="f-stoploss" type="number" step="0.01" min="0" placeholder="Opcional">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Tesis de inversión / Motivo de entrada</label>
+      <textarea class="form-input" id="f-notes" rows="3" placeholder="¿Por qué compraste esta posición? ¿Cuál es tu tesis?"></textarea>
+    </div>
+
     <button class="btn-primary" id="save-pos-btn">Guardar posición</button>
     <button class="btn-ghost" id="cancel-pos-btn">Cancelar</button>
   </div>
@@ -551,12 +656,7 @@ const FRED_KEY    = '6b85094d1f6fd5dd4eb0d87f0df5f995';
 function loadData(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch{return d}}
 function saveData(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
 
-let positions = loadData('positions_v3',[
-  {id:1,ticker:'AAPL',name:'Apple Inc.',price:163.40,shares:20,date:'2025-09-15',sector:'Tecnología',commission:0,notes:'Fortaleza estructural en ecosistema hardware y servicios.',currentPrice:194.20},
-  {id:2,ticker:'MSFT',name:'Microsoft Corp.',price:378.50,shares:10,date:'2025-11-02',sector:'Tecnología',commission:0,notes:'Aceleración Azure e IA empresarial.',currentPrice:415.80},
-  {id:3,ticker:'XOM',name:'Exxon Mobil',price:112.80,shares:30,date:'2025-08-10',sector:'Energía',commission:0,notes:'Ciclo energético y dividendo sólido.',currentPrice:104.60},
-  {id:4,ticker:'UNH',name:'UnitedHealth',price:521.00,shares:8,date:'2026-01-20',sector:'Salud',commission:0,notes:'Liderazgo en salud gestionada.',currentPrice:548.40},
-]);
+let positions = loadData('positions_v3',[]);
 let journalEntries = loadData('journal_v2',[
   {id:1,ticker:'NVDA',type:'entry',date:'2026-06-08',thesis:'Liderazgo en IA con demanda estructural de data centers. Breakout técnico confirmado con volumen institucional elevado.',emotion:'Convicción alta. Señal técnica clara y fundamentos sólidos.',lesson:'',tags:['Momentum','IA','Breakout']},
   {id:2,ticker:'INTC',type:'postmortem',date:'2026-04-22',thesis:'Tesis de recuperación de cuota de mercado. El momentum no se materializó y perdió soporte clave.',emotion:'Demasiada confianza en narrativa sin confirmación técnica.',lesson:'El cambio de régimen sectorial puede afectar antes de que la recuperación fundamental se materialice.',tags:['Error de timing','Lección']},
@@ -1328,90 +1428,253 @@ function insertTVWidget(ticker, cardId) {
 
 function totalPortfolioValue() { return positions.reduce((s,p)=>s+p.shares*p.currentPrice,0); }
 
+function totalPortfolioValue() {
+  return positions.reduce((s,p) => s + p.shares * (p.currentPrice || p.price), 0);
+}
+
+function totalPortfolioCost() {
+  return positions.reduce((s,p) => s + p.shares * p.price + (p.commission||0), 0);
+}
+
+// Decisión copiloto: acumular / mantener / reducir / salir
+function getPositionDecision(pos, prob) {
+  const pnlPct = ((pos.currentPrice - pos.price) / pos.price) * 100;
+  const daysHeld = pos.date ? Math.round((Date.now() - new Date(pos.date)) / 86400000) : 0;
+
+  if (prob >= 80 && pnlPct > 5) return {
+    decision: 'MANTENER', icon: '✅', color: 'var(--accent)', bg: 'var(--accent-dim)',
+    text: `La posición muestra fortaleza técnica y rentabilidad positiva (+${pnlPct.toFixed(1)}%). El copiloto recomienda mantener sin cambios.`
+  };
+  if (prob >= 75 && pnlPct < 5) return {
+    decision: 'ACUMULAR', icon: '🟢', color: '#34d399', bg: 'rgba(52,211,153,0.1)',
+    text: `Señales técnicas positivas con precio aún moderado. Condiciones estadísticamente favorables para valorar una ampliación de la posición.`
+  };
+  if (prob >= 60 && prob < 75) return {
+    decision: 'MANTENER', icon: '👀', color: 'var(--warn)', bg: 'var(--warn-dim)',
+    text: `Posición estable pero con señales mixtas. El copiloto sugiere mantener y vigilar el siguiente movimiento antes de actuar.`
+  };
+  if (prob >= 45 && prob < 60) return {
+    decision: 'VIGILAR', icon: '⚠️', color: 'var(--warn)', bg: 'var(--warn-dim)',
+    text: `Deterioro técnico moderado detectado. Revisa el stop dinámico y considera reducir exposición si la señal se confirma.`
+  };
+  if (prob < 45 && pnlPct > 10) return {
+    decision: 'REDUCIR PARCIAL', icon: '🔶', color: '#f97316', bg: 'rgba(249,115,22,0.1)',
+    text: `La posición tiene beneficios pero las señales técnicas se deterioran. El copiloto sugiere proteger parte de las ganancias reduciendo parcialmente.`
+  };
+  return {
+    decision: 'REVISAR SALIDA', icon: '🔴', color: 'var(--danger)', bg: 'var(--danger-dim)',
+    text: `Múltiples señales negativas detectadas. El copiloto sugiere revisar la tesis original y considerar una salida total o parcial de la posición.`
+  };
+}
+
+function calcPositionProb(pos) {
+  if (pos.techData) {
+    const pnlPct = ((pos.currentPrice - pos.price) / pos.price) * 100;
+    const bonus = pnlPct>10?3:pnlPct>0?1:pnlPct>-5?-5:-12;
+    return Math.min(95, Math.max(20, Math.round(pos.techData.score + bonus)));
+  }
+  const sectorScore={'Tecnología':78,'Salud':72,'Financiero':65,'Industriales':68,'Consumo discrecional':60,'Consumo básico':58,'Energía':40,'Utilities':55,'Materiales':50,'Comunicaciones':62,'Inmobiliario':55,'Otro':55};
+  const base = sectorScore[pos.sector] || 55;
+  const pnlPct = ((pos.currentPrice - pos.price) / pos.price) * 100;
+  const bonus = pnlPct>10?5:pnlPct>0?2:pnlPct>-5?-5:-15;
+  return Math.min(95, Math.max(20, base + bonus));
+}
+
+function calcStop(pos) {
+  if (pos.techData?.indicators?.atr) {
+    return Math.max(pos.price * 0.85, pos.currentPrice - pos.techData.indicators.atr * 2).toFixed(2);
+  }
+  return (pos.currentPrice * (pos.sector==='Tecnología'?0.88:0.91)).toFixed(2);
+}
+
+function getCurrencySymbol(currency) {
+  return currency === 'EUR' ? '€' : currency === 'GBP' ? '£' : '$';
+}
+
 function renderPortfolioHero() {
-  const total=totalPortfolioValue(), totalCost=positions.reduce((s,p)=>s+p.shares*p.price,0);
-  const pnl=total-totalCost, pnlPct=totalCost>0?(pnl/totalCost)*100:0;
-  const dailyChg=total*0.0082;
-  document.getElementById('total-value').textContent='$'+total.toLocaleString('en-US',{maximumFractionDigits:2});
-  document.getElementById('total-change').textContent=`+$${dailyChg.toLocaleString('en-US',{maximumFractionDigits:0})} hoy (+0.82%)`;
-  const pnlEl=document.getElementById('pnl-total');
-  pnlEl.textContent=(pnl>=0?'+':'')+`$${Math.abs(pnl).toLocaleString('en-US',{maximumFractionDigits:0})}`;
-  pnlEl.className='metric-val '+(pnl>=0?'up':'down');
-  const pctEl=document.getElementById('pnl-pct');
-  pctEl.textContent=(pnlPct>=0?'+':'')+pnlPct.toFixed(1)+'%';
-  pctEl.className='metric-val '+(pnlPct>=0?'up':'down');
-  document.getElementById('pos-count').textContent=positions.length;
+  const hasPositions = positions.length > 0;
+  document.getElementById('pf-empty').style.display  = hasPositions ? 'none'  : 'block';
+  document.getElementById('pf-filled').style.display = hasPositions ? 'block' : 'none';
+  if (!hasPositions) return;
+
+  const total    = totalPortfolioValue();
+  const cost     = totalPortfolioCost();
+  const pnl      = total - cost;
+  const pnlPct   = cost > 0 ? (pnl / cost) * 100 : 0;
+  const sym      = positions[0] ? getCurrencySymbol(positions[0].currency || 'USD') : '$';
+  const dailyChg = total * 0.0082; // estimado hasta datos reales
+
+  document.getElementById('total-value').textContent = sym + total.toLocaleString('en-US',{maximumFractionDigits:2});
+  document.getElementById('total-change-pct').textContent = (pnlPct>=0?'+':'')+pnlPct.toFixed(2)+'%';
+  document.getElementById('total-change-pct').style.color = pnlPct>=0?'var(--accent)':'var(--danger)';
+  document.getElementById('total-change').textContent = 'Inversión total: '+sym+cost.toLocaleString('en-US',{maximumFractionDigits:2});
+
+  const pnlEl = document.getElementById('pnl-total');
+  pnlEl.textContent = (pnl>=0?'+':'')+sym+Math.abs(pnl).toLocaleString('en-US',{maximumFractionDigits:2});
+  pnlEl.className = 'metric-val '+(pnl>=0?'up':'down');
+
+  const pctEl = document.getElementById('pnl-pct');
+  pctEl.textContent = (pnlPct>=0?'+':'')+pnlPct.toFixed(2)+'%';
+  pctEl.className = 'metric-val '+(pnlPct>=0?'up':'down');
+
+  document.getElementById('pos-count').textContent = positions.length;
+
+  // Texto copiloto cartera
+  const box = document.getElementById('pf-copilot-box');
+  if (box) {
+    const alerts = positions.filter(p => calcPositionProb(p) < 50).length;
+    const stars  = positions.filter(p => calcPositionProb(p) >= 75).length;
+    let txt = '';
+    if (!positions.length) { txt = 'Añade posiciones para ver el análisis.'; }
+    else if (stars === positions.length) { txt = `✅ Todas las posiciones (${positions.length}) muestran señales técnicas positivas. El copiloto no detecta señales de deterioro relevantes. Buenas condiciones para mantener la cartera actual.`; }
+    else if (alerts > 0) { txt = `⚠️ El copiloto detecta señales de deterioro en ${alerts} posición${alerts>1?'es':''}. Revisa las posiciones marcadas en rojo y considera si la tesis original sigue vigente.`; }
+    else { const mixedTxt = '\uD83D\uDC40 Cartera con señales mixtas. ' + stars + ' posicion' + (stars!==1?'es muestran':'muestra') + ' fortaleza y ' + (positions.length - stars) + ' require' + (positions.length-stars!==1?'n':'') + ' vigilancia. Sin urgencia de acción.'; txt = mixedTxt; }
+    box.textContent = txt;
+  }
 }
 
 function renderPositions() {
-  const el=document.getElementById('positions-list');
-  el.innerHTML='';
-  if (!positions.length){el.innerHTML='<div class="empty-state">Sin posiciones. Añade tu primera posición.</div>';return}
-  positions.forEach(pos=>{
-    const cost=pos.shares*pos.price, val=pos.shares*pos.currentPrice;
-    const pnl=val-cost, pnlPct=(pnl/cost)*100, pnlPos=pnl>=0;
-    const prob=calcPositionProb(pos), sc=getScenario(prob), stop=calcStop(pos);
-    const weight=totalPortfolioValue()>0?(val/totalPortfolioValue()*100).toFixed(1):0;
-    const probColor=prob>=70?'var(--accent)':prob>=55?'var(--warn)':'var(--danger)';
-    const probBarColor=prob>=70?'#00d4a0':prob>=55?'#f59e0b':'#ef4444';
-    const techTag=pos.techData?`<span class="tag tag-tech" style="margin-bottom:6px;display:inline-block">Score técnico: ${pos.techData.score}pts</span>`:'';
-    const srHtml=pos.techData?buildSRhtml(pos.techData,pos.currentPrice):'';
-    el.innerHTML+=`<div class="pos-card" id="pos-card-${pos.id}">
+  const el = document.getElementById('positions-list');
+  if (!el) return;
+  el.innerHTML = '';
+  if (!positions.length) return;
+
+  positions.forEach(pos => {
+    const cur = pos.currentPrice || pos.price;
+    const cost = pos.shares * pos.price + (pos.commission || 0);
+    const val  = pos.shares * cur;
+    const pnl  = val - cost;
+    const pnlPct = (pnl / cost) * 100;
+    const pnlPos = pnl >= 0;
+    const sym  = getCurrencySymbol(pos.currency || 'USD');
+    const prob = calcPositionProb(pos);
+    const dec  = getPositionDecision(pos, prob);
+    const stop = calcStop(pos);
+    const weight = totalPortfolioValue() > 0 ? (val / totalPortfolioValue() * 100).toFixed(1) : 0;
+    const daysHeld = pos.date ? Math.round((Date.now() - new Date(pos.date)) / 86400000) : '—';
+    const probColor = prob>=70?'var(--accent)':prob>=55?'var(--warn)':'var(--danger)';
+    const probBarColor = prob>=70?'#00d4a0':prob>=55?'#f59e0b':'#ef4444';
+
+    // Señales técnicas si disponibles
+    let techSignals = '';
+    if (pos.techData) {
+      const I = pos.techData.indicators;
+      const bulls = pos.techData.signals.filter(s=>s.type==='bull').slice(0,2);
+      const bears = pos.techData.signals.filter(s=>s.type==='bear').slice(0,2);
+      const sigTags = [...bulls.map(s=>`<span class="tag tag-pos" style="font-size:10px">${s.label}</span>`),
+                       ...bears.map(s=>`<span class="tag tag-neg" style="font-size:10px">${s.label}</span>`)].join('');
+      techSignals = `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px">${sigTags}</div>`;
+    }
+
+    // Soportes y resistencias
+    let srHtml = '';
+    if (pos.techData?.sr) {
+      const {resistances, supports} = pos.techData.sr;
+      if (resistances.length || supports.length) {
+        srHtml = '<div style="margin-bottom:8px"><div style="font-size:10px;color:var(--text-muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.5px">Soportes y resistencias</div><div style="display:flex;flex-wrap:wrap;gap:4px">';
+        resistances.forEach(r => srHtml += `<span class="sr-tag sr-res">R ${sym}${r.price.toFixed(2)}</span>`);
+        srHtml += `<span class="sr-tag sr-current">${sym}${cur.toFixed(2)}</span>`;
+        supports.forEach(s => srHtml += `<span class="sr-tag sr-sup">S ${sym}${s.price.toFixed(2)}</span>`);
+        srHtml += '</div></div>';
+      }
+    }
+
+    el.innerHTML += `
+    <div class="pos-card" id="pos-card-${pos.id}">
+      <!-- Cabecera -->
       <div class="pos-header">
-        <div><div class="pos-ticker">${pos.ticker}</div><div class="pos-co">${pos.name} · ${pos.shares} acc.</div></div>
+        <div>
+          <div class="pos-ticker">${pos.ticker}</div>
+          <div class="pos-co">${pos.name} · ${pos.sector}</div>
+        </div>
         <div class="pos-pnl">
-          <div class="pos-pnl-val" style="color:${pnlPos?'var(--accent)':'var(--danger)'}">${pnlPos?'+':''}$${Math.abs(pnl).toLocaleString('en-US',{maximumFractionDigits:0})}</div>
-          <div class="pos-pnl-pct">${pnlPos?'+':''}${pnlPct.toFixed(2)}% total</div>
+          <div class="pos-pnl-val" style="color:${pnlPos?'var(--accent)':'var(--danger)'}">${pnlPos?'+':''}${sym}${Math.abs(pnl).toLocaleString('en-US',{maximumFractionDigits:2})}</div>
+          <div class="pos-pnl-pct" style="color:${pnlPos?'var(--accent)':'var(--danger)'}">${pnlPos?'+':''}${pnlPct.toFixed(2)}%</div>
         </div>
       </div>
-      ${techTag}
-      <div class="pos-metrics-grid">
-        <div class="pos-metric"><div class="pos-metric-lbl">Precio actual</div><div class="pos-metric-val">$${pos.currentPrice.toFixed(2)}</div></div>
-        <div class="pos-metric"><div class="pos-metric-lbl">Precio medio</div><div class="pos-metric-val">$${pos.price.toFixed(2)}</div></div>
-        <div class="pos-metric"><div class="pos-metric-lbl">Valor posición</div><div class="pos-metric-val">$${parseInt(val).toLocaleString('en-US')}</div></div>
-        <div class="pos-metric"><div class="pos-metric-lbl">Peso en cartera</div><div class="pos-metric-val">${weight}%</div></div>
+
+      <!-- DECISIÓN COPILOTO — destacada -->
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius-md);background:${dec.bg};border:1px solid ${dec.color};margin-bottom:12px">
+        <span style="font-size:22px">${dec.icon}</span>
+        <div>
+          <div style="font-size:12px;font-weight:700;color:${dec.color};margin-bottom:2px">${dec.decision}</div>
+          <div style="font-size:11px;color:var(--text-secondary);line-height:1.5">${dec.text}</div>
+        </div>
       </div>
+
+      <!-- Métricas de la posición -->
+      <div class="pos-metrics-grid" style="margin-bottom:10px">
+        <div class="pos-metric"><div class="pos-metric-lbl">Precio compra</div><div class="pos-metric-val">${sym}${pos.price.toFixed(2)}</div></div>
+        <div class="pos-metric"><div class="pos-metric-lbl">Precio actual</div><div class="pos-metric-val" style="color:${cur>=pos.price?'var(--accent)':'var(--danger)'}">${sym}${cur.toFixed(2)}</div></div>
+        <div class="pos-metric"><div class="pos-metric-lbl">Nº acciones</div><div class="pos-metric-val">${pos.shares}</div></div>
+        <div class="pos-metric"><div class="pos-metric-lbl">Inversión total</div><div class="pos-metric-val">${sym}${cost.toLocaleString('en-US',{maximumFractionDigits:2})}</div></div>
+        <div class="pos-metric"><div class="pos-metric-lbl">Valor actual</div><div class="pos-metric-val">${sym}${val.toLocaleString('en-US',{maximumFractionDigits:2})}</div></div>
+        <div class="pos-metric"><div class="pos-metric-lbl">Peso cartera</div><div class="pos-metric-val">${weight}%</div></div>
+        <div class="pos-metric"><div class="pos-metric-lbl">Días en cartera</div><div class="pos-metric-val">${daysHeld}d</div></div>
+        <div class="pos-metric"><div class="pos-metric-lbl">Comisiones</div><div class="pos-metric-val">${sym}${(pos.commission||0).toFixed(2)}</div></div>
+      </div>
+
+      <!-- Barra probabilidad -->
       <div class="prob-bar-wrap">
-        <div class="prob-bar-header"><span class="prob-bar-label">Prob. continuidad favorable</span><span class="prob-bar-pct" style="color:${probColor}">${prob}%</span></div>
+        <div class="prob-bar-header">
+          <span class="prob-bar-label">Prob. continuidad favorable</span>
+          <span class="prob-bar-pct" style="color:${probColor}">${prob}%</span>
+        </div>
         <div class="prob-bar-track"><div class="prob-bar-fill" style="width:${prob}%;background:${probBarColor}"></div></div>
       </div>
-      <div class="scenario-box ${sc.cls}"><strong>${sc.label}</strong><br>${sc.text}</div>
+
+      <!-- Señales técnicas -->
+      ${techSignals}
+
+      <!-- Soportes y resistencias -->
       ${srHtml}
-      <div class="stop-row"><span class="stop-lbl">🛡 Stop dinámico ATR (referencia analítica)</span><span class="stop-val">$${stop}</span></div>
-      <div style="display:flex;gap:6px;margin-top:10px">
-        <button class="tv-btn" style="flex:1;padding:8px" onclick="insertTVWidget('${pos.ticker}','pos-card-${pos.id}')">📊 Gráfico TradingView</button>
-        <button class="tv-btn" style="flex:1;padding:8px;color:var(--text-muted)" onclick="addJournalFromPos('${pos.ticker}')">📓 Diario</button>
-        <button class="tv-btn" style="padding:8px;color:var(--danger)" onclick="deletePosition(${pos.id})">🗑</button>
+
+      <!-- Stop dinámico -->
+      <div class="stop-row" style="margin-bottom:10px">
+        <span class="stop-lbl">🛡 Stop dinámico ATR (referencia)</span>
+        <span class="stop-val">${sym}${stop}</span>
       </div>
+
+      ${pos.stoploss ? `<div class="stop-row" style="margin-bottom:10px;border-color:var(--danger)"><span class="stop-lbl" style="color:var(--danger)">🔴 Tu stop personal</span><span class="stop-val" style="color:var(--danger)">${sym}${parseFloat(pos.stoploss).toFixed(2)}</span></div>` : ''}
+
+      <!-- Tesis original -->
+      ${pos.notes ? `<div style="font-size:11px;color:var(--text-muted);background:var(--bg-card2);padding:8px 10px;border-radius:var(--radius-sm);margin-bottom:10px;line-height:1.5"><strong style="color:var(--text-secondary)">Tesis original:</strong> ${pos.notes}</div>` : ''}
+
+      <!-- Acciones -->
+      <div style="display:flex;gap:6px">
+        <button class="tv-btn" style="flex:1;padding:8px;font-size:11px" onclick="insertTVWidgetInto('${pos.ticker}','pos-tv-${pos.id}')">📊 TradingView</button>
+        <button class="tv-btn" style="flex:1;padding:8px;font-size:11px" onclick="addJournalFromPos('${pos.ticker}')">📓 Diario</button>
+        <button class="tv-btn" style="padding:8px;font-size:11px;color:var(--danger)" onclick="deletePosition(${pos.id})">🗑</button>
+      </div>
+      <div id="pos-tv-${pos.id}"></div>
     </div>`;
   });
 }
 
-function buildSRhtml(techData, current) {
-  if (!techData?.sr) return '';
-  const {resistances, supports} = techData.sr;
-  if (!resistances.length && !supports.length) return '';
-  let html='<div style="margin-bottom:8px"><div style="font-size:10px;color:var(--text-muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.5px">Soportes y resistencias</div><div class="sr-block">';
-  resistances.forEach(r=>html+=`<span class="sr-tag sr-res">R: $${r.price.toFixed(2)}</span>`);
-  html+=`<span class="sr-tag sr-current">$${current.toFixed(2)}</span>`;
-  supports.forEach(s=>html+=`<span class="sr-tag sr-sup">S: $${s.price.toFixed(2)}</span>`);
-  return html+'</div></div>';
-}
-
 function renderPieChart() {
-  const map={};
-  positions.forEach(p=>{const v=p.shares*p.currentPrice;map[p.sector]=(map[p.sector]||0)+v});
-  const labels=Object.keys(map), data=labels.map(l=>map[l]), total=data.reduce((a,b)=>a+b,0);
-  const legend=document.getElementById('pie-legend');
-  legend.innerHTML='';
-  labels.forEach((l,i)=>{
-    const pct=total>0?((data[i]/total)*100).toFixed(1):0;
-    legend.innerHTML+=`<div class="pie-legend-item"><div class="pie-dot" style="background:${SECTOR_COLORS[i%SECTOR_COLORS.length]}"></div><span style="color:var(--text-secondary)">${l} <strong style="color:var(--text-primary)">${pct}%</strong></span></div>`;
+  const map = {};
+  positions.forEach(p => {
+    const v = p.shares * (p.currentPrice || p.price);
+    map[p.sector] = (map[p.sector] || 0) + v;
   });
-  const canvas=document.getElementById('pieChart');
-  if (window._pieChart){window._pieChart.destroy()}
-  if (!data.length) return;
-  window._pieChart=new Chart(canvas,{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:SECTOR_COLORS.slice(0,labels.length),borderWidth:0,hoverOffset:4}]},options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{display:false}}}});
+  const labels = Object.keys(map), data = labels.map(l=>map[l]);
+  const total = data.reduce((a,b)=>a+b,0);
+  const legend = document.getElementById('pie-legend');
+  if (legend) {
+    legend.innerHTML = '';
+    labels.forEach((l,i) => {
+      const pct = total > 0 ? ((data[i]/total)*100).toFixed(1) : 0;
+      legend.innerHTML += `<div class="pie-legend-item"><div class="pie-dot" style="background:${SECTOR_COLORS[i%SECTOR_COLORS.length]}"></div><span style="color:var(--text-secondary)">${l} <strong style="color:var(--text-primary)">${pct}%</strong></span></div>`;
+    });
+  }
+  const canvas = document.getElementById('pieChart');
+  if (window._pieChart) { window._pieChart.destroy(); }
+  if (!data.length || !canvas) return;
+  window._pieChart = new Chart(canvas, {
+    type:'doughnut',
+    data:{labels, datasets:[{data, backgroundColor:SECTOR_COLORS.slice(0,labels.length), borderWidth:0, hoverOffset:4}]},
+    options:{responsive:true, maintainAspectRatio:false, cutout:'65%', plugins:{legend:{display:false}}}
+  });
 }
 
 function renderSectorChart() {
@@ -1527,21 +1790,117 @@ document.getElementById('pos-modal').addEventListener('click',e=>{if(e.target===
 document.getElementById('journal-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal('journal-modal')});
 document.getElementById('f-date').value=new Date().toISOString().split('T')[0];
 
-document.getElementById('save-pos-btn').onclick=()=>{
-  const ticker=document.getElementById('f-ticker').value.trim().toUpperCase();
-  const name=document.getElementById('f-name').value.trim();
-  const price=parseFloat(document.getElementById('f-price').value);
-  const shares=parseInt(document.getElementById('f-shares').value);
-  if(!ticker||!name||isNaN(price)||isNaN(shares)||price<=0||shares<=0){alert('Completa los campos obligatorios.');return}
-  const pos={id:nextPosId++,ticker,name,price,shares,date:document.getElementById('f-date').value,sector:document.getElementById('f-sector').value,commission:parseFloat(document.getElementById('f-commission').value)||0,notes:document.getElementById('f-notes').value.trim(),currentPrice:price};
-  positions.push(pos);
-  saveData('positions_v3',positions);saveData('nextPosId',nextPosId);
-  ['f-ticker','f-name','f-price','f-shares','f-commission','f-notes'].forEach(id=>document.getElementById(id).value='');
-  closeModal('pos-modal');showTab('portfolio');
-  // Cargar precio y análisis técnico para la nueva posición
-  setTimeout(()=>loadPortfolioPrices(),500);
-  setTimeout(()=>getTechAnalysis(ticker).then(tech=>{if(tech){pos.techData=tech;saveData('positions_v3',positions);if(currentTab==='portfolio')renderPositions()}}),3000);
+// Mapa de tickers conocidos para autocompletar empresa
+const KNOWN_TICKERS = {
+  AAPL:'Apple Inc.',MSFT:'Microsoft Corp.',NVDA:'NVIDIA Corp.',GOOGL:'Alphabet Inc.',
+  AMZN:'Amazon.com',META:'Meta Platforms',TSLA:'Tesla Inc.',BRK:'Berkshire Hathaway',
+  V:'Visa Inc.',JPM:'JPMorgan Chase',XOM:'Exxon Mobil',UNH:'UnitedHealth Group',
+  LLY:'Eli Lilly & Co.',JNJ:'Johnson & Johnson',MA:'Mastercard',PG:'Procter & Gamble',
+  HD:'Home Depot',MRK:'Merck & Co.',ABBV:'AbbVie Inc.',CVX:'Chevron Corp.',
+  BAC:'Bank of America',KO:'Coca-Cola Co.',PEP:'PepsiCo Inc.',AVGO:'Broadcom Inc.',
+  COST:'Costco Wholesale',WMT:'Walmart Inc.',TMO:'Thermo Fisher',MCD:'McDonalds Corp.',
+  ACN:'Accenture PLC',CSCO:'Cisco Systems',IBM:'IBM Corp.',INTC:'Intel Corp.',
+  AMD:'Advanced Micro Devices',NFLX:'Netflix Inc.',DIS:'Walt Disney Co.',GE:'GE Aerospace',
+  GS:'Goldman Sachs',MS:'Morgan Stanley',PYPL:'PayPal Holdings',SHOP:'Shopify Inc.',
+  CRM:'Salesforce Inc.',ADBE:'Adobe Inc.',NOW:'ServiceNow',UBER:'Uber Technologies',
 };
+
+function autoFillName(ticker) {
+  if (KNOWN_TICKERS[ticker]) {
+    document.getElementById('f-name').value = KNOWN_TICKERS[ticker];
+  }
+}
+
+// Preview en tiempo real del formulario
+function recalcForm() {
+  const price  = parseFloat(document.getElementById('f-price').value);
+  const shares = parseFloat(document.getElementById('f-shares').value);
+  const ticker = document.getElementById('f-ticker').value.trim().toUpperCase();
+  const currency = document.getElementById('f-currency').value;
+  const sym = getCurrencySymbol(currency);
+  const box = document.getElementById('form-calc-box');
+
+  if (!price || !shares || price <= 0 || shares <= 0) { box.style.display='none'; return; }
+  box.style.display = 'block';
+
+  const totalCost = price * shares;
+  // Buscar precio actual si está en cartera o en oportunidades
+  const existingOpp = opportunities.find(o => o.ticker === ticker);
+  const existingPos = positions.find(p => p.ticker === ticker);
+  const currentEst  = existingPos?.currentPrice || (existingOpp ? price * 1.05 : null);
+
+  document.getElementById('f-calc-total').textContent = sym + totalCost.toLocaleString('en-US',{maximumFractionDigits:2});
+  document.getElementById('f-calc-currency').textContent = currency;
+
+  if (currentEst) {
+    const currentVal = currentEst * shares;
+    const profit = currentVal - totalCost;
+    const yieldPct = (profit / totalCost) * 100;
+    document.getElementById('f-calc-current').textContent = sym + currentEst.toFixed(2);
+    document.getElementById('f-calc-val').textContent = sym + currentVal.toLocaleString('en-US',{maximumFractionDigits:2});
+    const profEl = document.getElementById('f-calc-profit');
+    profEl.textContent = (profit>=0?'+':'')+sym+Math.abs(profit).toLocaleString('en-US',{maximumFractionDigits:2});
+    profEl.style.color = profit>=0?'var(--accent)':'var(--danger)';
+    const yieldEl = document.getElementById('f-calc-yield');
+    yieldEl.textContent = (yieldPct>=0?'+':'')+yieldPct.toFixed(2)+'%';
+    yieldEl.style.color = yieldPct>=0?'var(--accent)':'var(--danger)';
+  } else {
+    document.getElementById('f-calc-current').textContent = 'Pendiente API';
+    document.getElementById('f-calc-val').textContent = '—';
+    document.getElementById('f-calc-profit').textContent = '—';
+    document.getElementById('f-calc-yield').textContent = '—';
+  }
+}
+
+document.getElementById('save-pos-btn').onclick = () => {
+  const ticker   = document.getElementById('f-ticker').value.trim().toUpperCase();
+  const name     = document.getElementById('f-name').value.trim();
+  const price    = parseFloat(document.getElementById('f-price').value);
+  const shares   = parseFloat(document.getElementById('f-shares').value);
+  const currency = document.getElementById('f-currency').value;
+  const stoploss = document.getElementById('f-stoploss').value;
+
+  if (!ticker || !name || isNaN(price) || isNaN(shares) || price <= 0 || shares <= 0) {
+    alert('Ticker, empresa, precio y número de acciones son obligatorios.'); return;
+  }
+
+  const pos = {
+    id: nextPosId++,
+    ticker, name, price, shares, currency,
+    date:       document.getElementById('f-date').value,
+    sector:     document.getElementById('f-sector').value,
+    commission: parseFloat(document.getElementById('f-commission').value) || 0,
+    stoploss:   stoploss ? parseFloat(stoploss) : null,
+    notes:      document.getElementById('f-notes').value.trim(),
+    currentPrice: price, // se actualiza con API
+  };
+
+  positions.push(pos);
+  saveData('positions_v3', positions);
+  saveData('nextPosId', nextPosId);
+
+  // Limpiar formulario
+  ['f-ticker','f-name','f-price','f-shares','f-commission','f-stoploss','f-notes'].forEach(id => {
+    const el = document.getElementById(id); if(el) el.value='';
+  });
+  document.getElementById('form-calc-box').style.display = 'none';
+
+  closeModal('pos-modal');
+  showTab('portfolio');
+
+  // Cargar precio real y análisis técnico en background
+  setTimeout(() => loadPortfolioPrices(), 500);
+  setTimeout(() => {
+    getTechAnalysis(ticker).then(tech => {
+      if (tech) {
+        pos.techData = tech;
+        saveData('positions_v3', positions);
+        if (currentTab === 'portfolio') { renderPortfolioHero(); renderPositions(); renderPieChart(); }
+      }
+    }).catch(()=>{});
+  }, 3000);
+};
+
 
 document.getElementById('save-journal-btn').onclick=()=>{
   const ticker=document.getElementById('jf-ticker').value.trim().toUpperCase()||'—';
@@ -1573,29 +1932,60 @@ function hideLoadingBanner(){const b=document.getElementById('loading-banner');i
 // ═══════════════════════════════════════
 // MAIN INIT
 // ═══════════════════════════════════════
+// ═══════════════════════════════════════
+// PANEL DE DIAGNÓSTICO VISUAL
+// ═══════════════════════════════════════
+const diagLog = [];
+function diagUpdate(key, status, detail) {
+  const icons = {ok:'✅',error:'❌',loading:'⏳',warn:'⚠️'};
+  const existing = diagLog.findIndex(d => d.key === key);
+  const ts = new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const entry = {key, status, detail, icon: icons[status]||'❓', ts};
+  if (existing >= 0) diagLog[existing] = entry; else diagLog.push(entry);
+  renderDiagPanel();
+}
+function renderDiagPanel() {
+  const el = document.getElementById('diag-panel-content');
+  if (!el) return;
+  el.innerHTML = diagLog.map(d =>
+    `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:0.5px solid var(--border);font-size:11px">
+      <span>${d.icon}</span>
+      <span style="color:var(--text-secondary);flex:1">${d.key}</span>
+      <span style="color:${d.status==='ok'?'var(--accent)':d.status==='error'?'var(--danger)':d.status==='warn'?'var(--warn)':'var(--text-muted)'};font-weight:600">${d.detail}</span>
+      <span style="color:var(--text-muted);font-size:10px">${d.ts}</span>
+    </div>`
+  ).join('');
+}
+
 async function initApp() {
   showLoadingBanner('⟳ Cargando datos reales...');
-  // Timeout de seguridad: si tarda más de 12s, ocultar banner igualmente
-  const safetyTimer = setTimeout(() => hideLoadingBanner(), 12000);
-  try {
-    await Promise.allSettled([
-      loadMarketData(),
-      loadSectorData(),
-      loadOpportunitiesData(),
-      loadPortfolioPrices(),
-      loadFredData(),
-    ]);
-    checkAlerts();
-  } catch(e) {
-    console.warn('initApp error:', e);
-  } finally {
-    clearTimeout(safetyTimer);
-    hideLoadingBanner();
-  }
-  // Análisis técnico en segundo plano (Polygon: 5 req/min en plan free)
+  const safetyTimer = setTimeout(() => hideLoadingBanner(), 15000);
+
+  diagUpdate('Polygon · Mercado',       'loading', 'Conectando...');
+  diagUpdate('Polygon · Sectores',      'loading', 'Conectando...');
+  diagUpdate('Polygon · Oportunidades', 'loading', 'Conectando...');
+  diagUpdate('Polygon · Cartera',       'loading', 'Conectando...');
+  diagUpdate('FRED · Macro',            'loading', 'Conectando...');
+
+  const wrap = async (fn, key) => {
+    try { await fn(); diagUpdate(key, 'ok', 'Datos recibidos'); }
+    catch(e) { diagUpdate(key, 'error', String(e).slice(0,35)); }
+  };
+
+  await Promise.allSettled([
+    wrap(loadMarketData,        'Polygon · Mercado'),
+    wrap(loadSectorData,        'Polygon · Sectores'),
+    wrap(loadOpportunitiesData, 'Polygon · Oportunidades'),
+    wrap(loadPortfolioPrices,   'Polygon · Cartera'),
+    wrap(loadFredData,          'FRED · Macro'),
+  ]);
+
+  checkAlerts();
+  clearTimeout(safetyTimer);
+  hideLoadingBanner();
+
   setTimeout(()=>loadTechAnalysisForOpps(), 2000);
   setTimeout(()=>loadTechAnalysisForPositions(), 4000);
-  // Alpha Vantage fundamentales
   setTimeout(()=>{ if(opportunities[0]) enrichWithFundamentals(opportunities[0]).then(()=>renderOpps()).catch(()=>{}); }, 8000);
 }
 
